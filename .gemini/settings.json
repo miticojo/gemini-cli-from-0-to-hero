@@ -1,0 +1,10 @@
+{
+  "security": {
+    "auth": {
+      "selectedType": "vertex-ai"
+    }
+  },
+  "general": {
+    "model": "gemini-3.1-pro-preview"
+  }
+}
