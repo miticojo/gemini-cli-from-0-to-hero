@@ -106,6 +106,26 @@ If green: 4 ✓ in 30 seconds. If anyone fails, point them at the table in
 `docs/CLOUDSHELL.md` "Common Cloud Shell issues" and pair them with a
 neighbour. Don't block the room.
 
+### Show what's in the repo right now
+
+```text
+ls -la
+```
+
+Audience sees:
+- `GEMINI.md` — project memory.
+- `.gemini/agents/` — 5 pre-authored subagents.
+- `.gemini/skills/` — 3 workspace skills.
+- `.gemini/settings.json` — forces `vertex-ai` auth.
+- `scripts/`, `Makefile`, `docs/`.
+
+**No `frontend/`. No `insight-agent/`. No `backend/`. No `functions/`.**
+
+> "We're starting from zero. The boilerplate that makes the workshop
+> possible — the agents, skills, runbook — is all that's here. We will
+> generate every line of application code through Gemini CLI in the next
+> 85 minutes."
+
 ---
 
 ## Slot 2 · GEMINI.md + extensions + skills (5–15')
@@ -226,12 +246,25 @@ After `@spec-writer` finishes:
 
 ## Slot 5b · Frontend scaffold (40–46')
 
+### 5b.0 · Materialize the Vite project from zero (40–41')
+
+In a side terminal (not gemini), one command:
+
+```bash
+make scaffold-frontend     # → npm create vite@latest frontend -- --template react-ts -y && npm install
+```
+
+Audience sees the Vite skeleton appear (~40 seconds). **No Gemini turn used.**
+
+### 5b.1 · Have Gemini fill it (41–46')
+
 ```text
-> @frontend-builder Build the Workshop Pulse frontend on top of the existing
-  Vite stub: React Router with /admin and /p/:workshopId routes, Firebase
-  Auth (Google SSO) wired in src/lib/firebase.ts, a Login button, and a
-  placeholder admin dashboard. Read src/App.tsx and replace the stub. Don't
-  wire the agent yet — that's the next step.
+> @frontend-builder The frontend/ directory was just scaffolded with
+  `npm create vite --template react-ts`. Build Workshop Pulse on top:
+  React Router with /admin and /p/:workshopId routes, Firebase Auth
+  (Google SSO) wired in src/lib/firebase.ts, a Login button, and a
+  placeholder admin dashboard. Replace src/App.tsx. Add deps as needed.
+  Don't wire the agent yet — that's the next step.
 ```
 
 ### Expected
@@ -239,7 +272,8 @@ After `@spec-writer` finishes:
 - `frontend/src/App.tsx` updated with `<RouterProvider>`.
 - `frontend/src/routes/Admin.tsx`, `frontend/src/routes/Attendee.tsx`.
 - `frontend/src/components/Login.tsx` (Google sign-in button).
-- `frontend/.env.example` updated if missing keys.
+- `frontend/package.json` updated with `firebase`, `react-router-dom`, `recharts`.
+- `frontend/.env.example` with `VITE_FIREBASE_*` keys.
 
 ### Recovery
 - If heavy UI lib added (MUI, Chakra): *"keep deps to react-router-dom,
@@ -250,9 +284,23 @@ After `@spec-writer` finishes:
 
 ## Slot 6 · ADK agent local-first (46–66')
 
-Three steps inside the slot.
+Four steps inside the slot.
 
-### 6a · Rewrite `insight-agent/app/agent.py` (46–54')
+### 6a.0 · Materialize the ADK project from zero (46–47')
+
+In a side terminal:
+
+```bash
+make scaffold-agent
+# wraps: uvx google-agents-cli create insight-agent --prototype --yes \
+#          --skip-checks --region us-central1 --deployment-target none
+# then: uv venv + uv pip install -e .
+```
+
+Audience sees the agents-cli scaffold appear (~30 seconds). **No Gemini turn used.**
+The default scaffold is a weather/time ReAct agent — that's our starting point.
+
+### 6a.1 · Rewrite `insight-agent/app/agent.py` (47–54')
 
 ```text
 > @adk-builder Rewrite insight-agent/app/agent.py per the contract in

@@ -89,22 +89,28 @@ if ! have firebase; then
 fi
 ok "firebase $(firebase --version)"
 
-# ---------- 6. python venv + agent deps --------------------------------------
-echo "▶ Step 6/6 — insight-agent Python deps"
-cd "$ROOT/insight-agent"
-if [[ ! -d ".venv" ]]; then
-  uv venv --python 3.12 .venv
+# ---------- 6. python venv + agent deps (only if scaffolded) ----------------
+if [[ -f "$ROOT/insight-agent/pyproject.toml" ]]; then
+  echo "▶ Step 6 — insight-agent Python deps"
+  cd "$ROOT/insight-agent"
+  if [[ ! -d ".venv" ]]; then
+    uv venv --python 3.12 .venv
+  fi
+  # shellcheck disable=SC1091
+  source .venv/bin/activate
+  uv pip install -e . --quiet
+  ok "insight-agent venv ready"
+  cd "$ROOT"
+else
+  log "insight-agent/ not scaffolded yet — skipping (will be created live in slot 6)"
 fi
-# shellcheck disable=SC1091
-source .venv/bin/activate
-uv pip install -e . --quiet
-ok "insight-agent venv ready"
-cd "$ROOT"
 
-# ---------- 7. frontend deps (best-effort) -----------------------------------
-if [[ -f frontend/package.json ]]; then
-  echo "▶ Bonus — frontend deps"
-  (cd frontend && npm install --silent) && ok "frontend deps installed" || warn "frontend deps skipped"
+# ---------- 7. frontend deps (only if scaffolded) ---------------------------
+if [[ -f "$ROOT/frontend/package.json" ]]; then
+  echo "▶ Step 7 — frontend deps"
+  (cd "$ROOT/frontend" && npm install --silent) && ok "frontend deps installed" || warn "frontend deps skipped"
+else
+  log "frontend/ not scaffolded yet — skipping (will be created live in slot 5b)"
 fi
 
 # ---------- 8. trust workspace + verify settings ----------------------------
