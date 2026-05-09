@@ -1,0 +1,52 @@
+// Reference target for slot 4 mega-prompt output.
+// Anonymous-auth-friendly rules. No `users/` collection lookup.
+// Admin = workshop document `createdBy`. One vote per (poll, user) enforced
+// by `voteId == request.auth.uid` (cheaper than `exists()`).
+// Compatible with both Anonymous and Google SSO (request.auth != null).
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    function isWorkshopOwner(workshopId) {
+      return isSignedIn()
+          && get(/databases/$(database)/documents/workshops/$(workshopId)).data.createdBy
+             == request.auth.uid;
+    }
+
+    match /workshops/{workshopId} {
+      allow read:           if isSignedIn();
+      allow create:         if isSignedIn()
+                            && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isOwner(resource.data.createdBy);
+
+      match /polls/{pollId} {
+        allow read:                   if isSignedIn();
+        allow create, update, delete: if isWorkshopOwner(workshopId);
+
+        match /votes/{voteId} {
+          // Workshop owner reads all; voter reads only their own.
+          allow read: if isWorkshopOwner(workshopId)
+                      || isOwner(resource.data.userId);
+
+          // One vote per (poll, user). voteId MUST equal the voter's uid.
+          allow create:
+            if isSignedIn()
+            && voteId == request.auth.uid
+            && request.resource.data.userId == request.auth.uid;
+
+          // Votes are immutable.
+          allow update, delete: if false;
+        }
+      }
+    }
+  }
+}

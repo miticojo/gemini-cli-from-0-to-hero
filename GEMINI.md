@@ -1,28 +1,45 @@
 # Workshop Pulse — Gemini CLI Project Context
 
 ## Mission
-Demo end-to-end app for collecting workshop feedback via Google-authenticated polls,
-with admin stats dashboard, QR code access, post-event thank-you email containing a
-custom Nano Banana hero image, and ADK insight-agent (local-first, Agent Engine optional).
+Demo end-to-end app for collecting workshop feedback via anonymous polls,
+with admin stats dashboard and a Vertex AI ADK insight-agent that generates
+poll questions and analyses sentiment. Built live in 90 minutes via Gemini
+CLI orchestration.
 
 ## Model
 
 - **Primary model**: `gemini-3.1-pro-preview` on **Vertex AI**, location `global`.
-- **Auth**: Application Default Credentials via `gcloud auth application-default login`.
+- **Auth (gcloud / Vertex)**: Application Default Credentials via `gcloud auth application-default login`.
 - **Env**: `GOOGLE_GENAI_USE_VERTEXAI=true`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION=global`.
 - Note: deploy regions (Agent Engine, Cloud Run, Firestore) stay `us-central1`; only the model lives at `global`.
 - Never hard-code API keys. Read from `.env` only.
 
+## Auth (app)
+
+The Workshop Pulse app uses **Firebase Anonymous Auth** by default:
+
+- `signInAnonymously()` runs once on import in `frontend/src/lib/firebase.ts`.
+- No Google OAuth popup. No authorized-domains dance with Cloud Shell preview URLs.
+- Workshop admin = the user who created the workshop document
+  (`createdBy == request.auth.uid`).
+- One vote per `(pollId, request.auth.uid)`, enforced by setting
+  `voteId = request.auth.uid`.
+
+A **Google SSO upgrade** is documented in `docs/HOMEWORK.md`. The Firestore
+rules accept `request.auth != null` for both providers, so adding Google
+later is purely a frontend change.
+
 ## Stack
 
-- **Frontend**: Vite + React + TypeScript, Firebase Auth (Google SSO), Recharts.
-- **Backend**: Firestore (collections `workshops`, `polls`, `votes`, `users`), Firebase Security Rules role-based.
+- **Frontend**: Vite + React + TypeScript, Firebase Anonymous Auth, Recharts.
+- **Backend**: Firestore (collections `workshops`, `polls`, `votes`), Firebase Security Rules anonymous-auth-friendly.
 - **Agent**: Google ADK (Python) via `agents-cli`. Two sub-agents:
   - `question-generator` — input: workshop brief → output: poll JSON.
   - `sentiment-insight` — input: votes array → output: `{mood, themes, summary}`.
-- **Image**: Nano Banana extension via MCP.
-- **Email**: Workspace extension (Gmail draft) via MCP.
-- **Deploy stretch**: Agent Engine (Reasoning Engine) + Firebase Hosting + Cloud Function proxy.
+- **Spec workflow**: `conductor` extension (`/conductor:setup` + `/conductor:newTrack`) produces `conductor/tracks/<id>/spec.md` and `plan.md`. `@spec-writer` is the alternative for non-Conductor projects.
+
+Out-of-scope today: Nano Banana email pipeline, Agent Engine deploy + Cloud
+Function proxy. Both have full recipes in `docs/HOMEWORK.md`.
 
 ## Architecture switch (dual-track)
 
@@ -38,31 +55,39 @@ Single env var `VITE_AGENT_ENDPOINT` switches the target. Same agent code both p
 - TypeScript strict, React function components, no class components.
 - Python 3.11+, type hints, ADK idioms only.
 - Firestore: never `read all`, always queries scoped by `workshopId`.
-- Security rules: role-based via custom claim `role: "admin"|"attendee"`.
+- Security rules: anonymous-auth + `createdBy` ownership; **no** `users/{uid}.role` lookups.
 - No secrets in repo. `.env.example` only.
 - Commit message format: Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`).
 
 ## Subagents available (in `.gemini/agents/`)
 
-- `@spec-writer` — produces `SPEC.md` from brief.
-- `@frontend-builder` — Vite + React + Firebase wiring.
-- `@backend-builder` — Firestore schema + security rules.
-- `@image-designer` — Nano Banana asset generation.
-- `@adk-builder` — ADK insight-agent scaffold + deploy.
+Active in the workshop:
+- `@frontend-builder` — Vite + React + Firebase Anonymous Auth + agent client.
+- `@backend-builder` — Firestore schema + anonymous-auth rules + indexes.
+- `@adk-builder` — ADK insight-agent rewrite + Vertex AI wiring.
+
+Available but not invoked in main flow:
+- `@spec-writer` — alternative to Conductor for single-feature SPEC.md.
+- `@image-designer` — homework recipe (Nano Banana thank-you email).
 
 Recursion guard: subagents must not invoke other subagents. Hub orchestrates only.
 
 ## Custom skills (in `.gemini/skills/`)
 
-- `poll-schema-designer` — Firestore schema + rules from brief.
-- `thank-you-email` — Gmail draft with Nano Banana hero, mood-aware.
-- `firebase-deploy-checklist` — preflight 6-step pre-deploy.
+- `poll-schema-designer` — Firestore schema + anonymous-auth rules from brief.
+- `thank-you-email` — Gmail draft with Nano Banana hero (homework recipe).
+- `firebase-deploy-checklist` — preflight 6-step pre-deploy (homework recipe).
 
 ## ADK skills (auto-loaded via `agents-cli setup`)
 
 `adk-cheatsheet`, `adk-dev-guide`, `adk-eval-guide`, `adk-deploy-guide`,
 `google-agents-cli-scaffold`, `google-agents-cli-workflow`,
 `google-agents-cli-adk-code`.
+
+## Extensions
+
+- `conductor` — `/conductor:setup`, `/conductor:newTrack`, `/conductor:implement`.
+  The PRD spine of the workshop.
 
 ## Workflow rules
 
@@ -73,6 +98,8 @@ Recursion guard: subagents must not invoke other subagents. Hub orchestrates onl
 
 ## Out of scope (today)
 
-- Agent-to-Agent (A2A) protocol — mention only, no demo.
-- Production auth hardening beyond Firebase rules.
-- Multi-tenant isolation.
+- Google SSO (homework — anonymous default works for the demo).
+- Nano Banana hero image + thank-you email pipeline (homework).
+- Agent Engine deploy + Cloud Function proxy (homework).
+- Agent-to-Agent (A2A) protocol (mention only, no demo).
+- Multi-tenant isolation, hardening beyond rules.

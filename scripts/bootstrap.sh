@@ -82,12 +82,24 @@ uvx google-agents-cli setup --quiet || uvx google-agents-cli setup
 ok "agents-cli installed; ADK skills available in ~/.agents/skills/"
 
 # ---------- 5. firebase CLI --------------------------------------------------
-echo "▶ Step 5/6 — firebase CLI"
+echo "▶ Step 5 — firebase CLI"
 if ! have firebase; then
   log "Installing firebase-tools globally"
   npm install -g firebase-tools
 fi
 ok "firebase $(firebase --version)"
+
+# ---------- 5b. conductor extension -----------------------------------------
+echo "▶ Step 5b — conductor extension (Gemini CLI)"
+if [[ ! -d "${HOME}/.gemini/extensions/conductor" ]]; then
+  log "Installing conductor extension..."
+  gemini extensions install https://github.com/gemini-cli-extensions/conductor \
+    --consent --skip-settings >/dev/null 2>&1 \
+    && ok "conductor installed" \
+    || warn "conductor install failed (re-run manually if needed)"
+else
+  ok "conductor already installed"
+fi
 
 # ---------- 6. python venv + agent deps (only if scaffolded) ----------------
 if [[ -f "$ROOT/insight-agent/pyproject.toml" ]]; then

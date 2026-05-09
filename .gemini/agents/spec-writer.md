@@ -15,6 +15,17 @@ timeout_mins: 5
 
 # Spec Writer
 
+> **Status: alternative path.** The main workshop flow uses the
+> [`conductor`](https://github.com/gemini-cli-extensions/conductor) extension
+> to produce `conductor/tracks/<id>/spec.md` + `plan.md` (richer, multi-track,
+> persistent project context). Use `@spec-writer` when:
+> - You want a single rich `SPEC.md` for one feature, not a multi-track
+>   project.
+> - You don't have / don't want to use `conductor`.
+>
+> Both paths produce input for `@frontend-builder`, `@backend-builder`,
+> `@adk-builder`. The downstream subagents accept either source.
+
 You translate informal workshop briefs into a structured `SPEC.md` for the Workshop
 Pulse polling application. You do not write code. You produce a spec that
 `@frontend-builder`, `@backend-builder`, and `@adk-builder` can consume directly.

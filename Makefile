@@ -10,13 +10,14 @@ PYTHON ?= python3
 FRONTEND_PORT := $(shell [ "$$CLOUD_SHELL" = "true" ] && echo 8081 || echo 5173)
 AGENT_PORT := 8080
 
-.PHONY: help bootstrap scaffold-frontend scaffold-agent agent-dev agent-test frontend-dev frontend-build clean preview-info gcloud-status gcloud-list gemini-test
+.PHONY: help bootstrap scaffold-frontend scaffold-agent firebase-config agent-dev agent-test frontend-dev frontend-build clean preview-info gcloud-status gcloud-list gemini-test
 
 help:
 	@echo "Setup:"
-	@echo "  bootstrap          Install global tooling (gemini, agents-cli, firebase, uv)"
-	@echo "  scaffold-frontend  npm create vite (only if frontend/ missing)"
+	@echo "  bootstrap          Install global tooling (gemini, agents-cli, firebase, uv, conductor ext)"
+	@echo "  scaffold-frontend  npm create vite + auto-populate frontend/.env via firebase-config"
 	@echo "  scaffold-agent     agents-cli create insight-agent (only if missing)"
+	@echo "  firebase-config    Auto-populate VITE_FIREBASE_* in frontend/.env"
 	@echo ""
 	@echo "Run:"
 	@echo "  agent-dev          Start ADK insight-agent on :$(AGENT_PORT)"
@@ -41,6 +42,10 @@ scaffold-frontend:
 	  npm create vite@latest $(FRONTEND_DIR) -- --template react-ts -y && \
 	  cd $(FRONTEND_DIR) && npm install; \
 	fi
+	@$(MAKE) firebase-config
+
+firebase-config:
+	@bash scripts/firebase-config.sh
 
 scaffold-agent:
 	@if [ -f $(AGENT_DIR)/pyproject.toml ]; then \

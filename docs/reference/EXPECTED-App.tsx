@@ -1,45 +1,50 @@
-import { useState } from 'react';
-import { queryAgent } from './lib/agent';
+// Reference target for slot 5b mega-prompt output.
+// Shows the App root with router; auth happens transparently in firebase.ts.
+
+import { StrictMode, useEffect, useState } from 'react';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { auth } from './lib/firebase';
+import { Admin } from './routes/Admin';
+import { Attendee } from './routes/Attendee';
+
+const router = createBrowserRouter([
+  { path: '/', element: <Admin /> },
+  { path: '/admin', element: <Admin /> },
+  { path: '/p/:workshopId', element: <Attendee /> },
+]);
 
 export function App() {
-  const [topic, setTopic] = useState('Gemini CLI from zero to hero');
-  const [out, setOut] = useState<string>('');
-  const [busy, setBusy] = useState(false);
+  const [uid, setUid] = useState<string | null>(null);
 
-  async function generate() {
-    setBusy(true);
-    setOut('');
-    try {
-      const result = await queryAgent('generate-poll', {
-        workshop_topic: topic,
-        num_questions: 4,
-        target_audience: 'developers',
-      });
-      setOut(JSON.stringify(result, null, 2));
-    } catch (err) {
-      setOut(String(err));
-    } finally {
-      setBusy(false);
-    }
-  }
+  useEffect(() => {
+    // signInAnonymously already kicked off in firebase.ts on import.
+    // We just subscribe to onAuthStateChanged to surface the uid.
+    const unsub = auth.onAuthStateChanged((user) => {
+      setUid(user?.uid ?? null);
+    });
+    return unsub;
+  }, []);
 
   return (
-    <main style={{ fontFamily: 'system-ui', maxWidth: 720, margin: '40px auto', padding: 24 }}>
-      <h1>Workshop Pulse — agent smoke test</h1>
-      <p>
-        Endpoint: <code>{import.meta.env.VITE_AGENT_ENDPOINT ?? 'http://localhost:8080'}</code>
-      </p>
-      <input
-        value={topic}
-        onChange={(e) => setTopic(e.target.value)}
-        style={{ width: '100%', padding: 8, fontSize: 16, marginBottom: 12 }}
-      />
-      <button onClick={generate} disabled={busy} style={{ padding: '8px 16px', fontSize: 16 }}>
-        {busy ? 'Generating…' : 'Generate poll'}
-      </button>
-      <pre style={{ background: '#f4f4f4', padding: 16, marginTop: 24, overflow: 'auto' }}>
-        {out || '(agent output will appear here)'}
-      </pre>
-    </main>
+    <StrictMode>
+      <RouterProvider router={router} />
+      {uid && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 8,
+            right: 8,
+            fontFamily: 'system-ui',
+            fontSize: 11,
+            color: '#888',
+            background: 'rgba(255,255,255,0.7)',
+            padding: '2px 6px',
+            borderRadius: 4,
+          }}
+        >
+          anon-{uid.slice(-6)}
+        </div>
+      )}
+    </StrictMode>
   );
 }

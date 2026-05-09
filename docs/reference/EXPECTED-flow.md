@@ -1,279 +1,255 @@
 # Facilitator cheat sheet — prompt-by-prompt flow
 
-This is the script you (facilitator) feed to Gemini CLI during the live workshop.
-For each slot it lists:
+This is the script you (facilitator) feed to Gemini CLI during the live
+workshop. For each slot it lists:
 
 - **Prompt** — what to type literally.
 - **Expected** — what should land on disk after Gemini finishes.
 - **Recovery** — what to do if Gemini diverges.
 
 The fully-worked targets live alongside this file:
-`EXPECTED-agent.py`, `EXPECTED-App.tsx`, `EXPECTED-agent.ts`.
-Refer to them silently while pacing the room. **Do not show them on screen** —
-audience must see Gemini produce the code.
+`EXPECTED-agent.py`, `EXPECTED-App.tsx`, `EXPECTED-agent.ts`,
+`EXPECTED-firebase.ts`, `EXPECTED-firestore.rules`. Refer to them silently
+while pacing the room. **Do not project them** — audience must see Gemini
+produce the code.
+
+> **Total live prompts in the workshop: 5.**
+> Conductor `/conductor:setup` (slot 3a), `/conductor:newTrack` (slot 3b),
+> backend mega-prompt (slot 4), frontend mega-prompt (slot 5),
+> ADK mega-prompt (slot 6). Slots 1, 2, 7, 8 are zero-prompt.
 
 ---
 
-## Slot 2 — `GEMINI.md` walkthrough (5–15')
+## Slot 1 · Setup smoke-test (0–5')
 
-No code generation. Audience runs:
+No `gemini` prompt. Run:
 
-```text
-gemini
-> /skills
-> /memory show
-> @adk-builder
+```bash
+make gemini-test
 ```
 
-Just verify all 5 subagents and 10 skills (7 ADK + 3 workspace) are listed.
+Expect 4 ✓.
 
 ---
 
-## Slot 3 — Skills concept + create a custom skill (15–24')
+## Slot 2 · GEMINI.md + extensions + skills (5–15')
 
-### Prompt
+No code generation. Audience runs in `gemini`:
 
 ```text
-Create a new workspace-tier skill called "poll-stats-helper" that knows how
-to compose Firestore aggregation queries for vote counts. It should live in
-.gemini/skills/poll-stats-helper/ with a SKILL.md whose description triggers
-on phrases like "vote stats", "tally results", "aggregate poll".
+> /skills
+> /memory show
+gemini extensions list
+```
+
+Verify 5 subagents + 10 skills (7 ADK + 3 workspace) + `conductor` extension.
+
+---
+
+## Slot 3a · `/conductor:setup` (15–25')
+
+```text
+> /conductor:setup
+```
+
+Walk through the wizard interactively. Use the answer table from
+`docs/RUNBOOK.md` slot 3a. If wizard hangs, re-run with `--yolo` once and
+paste all answers as a single block.
+
+### Expected
+- `conductor/index.md`
+- `conductor/product.md`
+- `conductor/tech-stack.md`
+- `conductor/workflow.md`
+- `conductor/product-guidelines.md`
+- `conductor/tracks.md` (empty registry)
+
+---
+
+## Slot 3b · `/conductor:newTrack` (25–40')
+
+```text
+> /conductor:newTrack "Bootstrap Workshop Pulse foundation: admin creates
+  workshop, generates AI poll, displays QR. Attendee scans, signs in
+  anonymously, votes. Admin sees live stats and triggers sentiment analysis."
 ```
 
 ### Expected
-
-- New directory `.gemini/skills/poll-stats-helper/SKILL.md`.
-- YAML frontmatter `name`, `description` keyword-rich.
-- Skill body with a stub query template.
+- `conductor/tracks/<id>/spec.md`
+- `conductor/tracks/<id>/plan.md` (multi-phase checklist)
+- `conductor/tracks/<id>/metadata.json`
+- `conductor/tracks/<id>/index.md`
+- `conductor/tracks.md` registry updated
 
 ### Recovery
-
-If Gemini puts it in `~/.gemini/skills/` instead of workspace, instruct:
-"move it under the project's `.gemini/skills/` directory so the team shares it."
-
-After: run `/skills` and confirm the new skill appears.
-
----
-
-## Slot 4 — Subagents tour (24–32')
-
-No new code. Audience reads `.gemini/agents/*.md` while you narrate the
-distinction:
-
-> "Skill = how. Subagent = who-in-isolation. Subagents have their own context
-> window. Skills inject instructions into the current conversation."
-
-Then call:
-
-```text
-@spec-writer Produce SPEC.md for Workshop Pulse based on GEMINI.md.
-```
-
-Expected: a `SPEC.md` at repo root with user stories, data model, agent
-contracts, acceptance criteria.
-
-### 30-second mention: when to graduate to `conductor`
-
-After `@spec-writer` finishes, hold up the deep `SPEC.md` and say:
-
-> "Today we want one rich spec for one feature, so `@spec-writer` is the right
-> tool — single artefact, deep coverage of the data model, routes, and agent
-> contracts. For projects with many features over time there's the official
-> `conductor` extension which splits things into `product.md` + `tech-stack.md`
-> + per-track `spec.md` + multi-phase `plan.md` checklist. Same 'measure
-> twice' philosophy, larger granularity. We'll skip it today and link it as
-> homework."
-
-Don't install conductor live — keep momentum. The rehearsal A/B test
-(`tmp/ab-test/`) showed conductor's per-track spec is shallower than
-`@spec-writer`'s for a single feature, but its `plan.md` and persistent
-`product.md`/`tech-stack.md` are wins on multi-feature projects.
+- If spec is too thin: *"deepen the data model in spec.md — list every
+  Firestore field with its type."*
+- If plan has fewer than 3 phases: *"split the plan into Backend, Frontend,
+  ADK Agent phases."*
 
 ---
 
-## Slot 5 — Build app: backend + frontend (32–46')
-
-### 5a — Backend rules
+## Slot 4 · Mega-prompt backend (40–48')
 
 ```text
-@backend-builder Generate the Firestore data model, security rules, and
-composite indexes for Workshop Pulse. Use the poll-schema-designer skill.
+> @backend-builder Read conductor/tracks/<track-id>/spec.md and plan.md.
+  Activate the poll-schema-designer skill.
+
+  Generate the COMPLETE Firestore data model for Workshop Pulse:
+  - backend/firestore.schema.md
+  - backend/firestore.rules using ANONYMOUS auth: any signed-in user
+    (anonymous OR Google) can read polls and write exactly one vote per
+    (pollId, userId). Admin distinction is by `createdBy == request.auth.uid`
+    on the workshop doc. No custom claims required.
+  - backend/firestore.indexes.json with the composite index on votes by
+    (pollId asc, createdAt asc).
+  Stop when all three files exist; do not run any deploy.
 ```
 
-#### Expected
-- `backend/firestore.schema.md`
-- `backend/firestore.rules`
-- `backend/firestore.indexes.json`
+### Expected (matches `EXPECTED-firestore.rules`)
+- `backend/firestore.schema.md` — collection tree.
+- `backend/firestore.rules` with:
+  - admin via `createdBy == request.auth.uid`,
+  - vote uniqueness via `voteId == request.auth.uid`,
+  - no `users/` collection lookup,
+  - no custom claims.
+- `backend/firestore.indexes.json` — composite index on `votes`
+  `(pollId asc, createdAt asc)`.
 
-Rules must enforce: vote create only by attendee, exactly once per `(pollId, userId)`;
-admin reads all votes in their workshop.
-
-#### Recovery
-If Gemini writes inline rules without invoking the skill, prompt:
-"Activate the poll-schema-designer skill before producing the rules."
-
-### 5b — Frontend scaffold
-
-```text
-@frontend-builder Build the Workshop Pulse frontend on top of the existing
-Vite stub: React Router with /admin and /p/:workshopId routes, Firebase Auth
-(Google SSO) wired in src/lib/firebase.ts, a Login button, and a placeholder
-admin dashboard. Read src/App.tsx and replace the stub. Don't wire the agent
-yet — that's the next step.
-```
-
-#### Expected
-- `frontend/src/lib/firebase.ts` (init, exports `auth`, `db`).
-- `frontend/src/App.tsx` updated with `<RouterProvider>`.
-- `frontend/src/routes/Admin.tsx`, `frontend/src/routes/Attendee.tsx`.
-- `frontend/src/components/Login.tsx` (Google sign-in button).
-- `frontend/.env.example` updated if missing keys.
-
-#### Recovery
-If Gemini installs heavy UI libs (MUI, Chakra) — stop and instruct:
-"keep dependencies to react-router-dom, firebase, recharts only."
+### Recovery
+- If rules use custom claims: *"no custom claims; admin = createdBy on the
+  workshop doc."*
+- If `users/` collection appears: *"drop users — anonymous auth needs no
+  profile docs."*
+- If skill not invoked: *"activate poll-schema-designer first."*
 
 ---
 
-## Slot 6 — ADK agent local-first (46–66')
+## Slot 5 · Mega-prompt frontend (48–60')
 
-### 6a — Rewrite the scaffold
+### 5a · Materialize Vite (side terminal, 48–50')
 
-```text
-@adk-builder Rewrite insight-agent/app/agent.py per the contract in GEMINI.md:
-a root_agent that routes on the `task` field of the user message, plus two
-sub-agents `question_generator` and `sentiment_insight`. Use Vertex AI
-gemini-3.1-pro-preview. Keep the App(name="app") so the directory matches.
-Activate the google-agents-cli-adk-code skill.
+```bash
+make scaffold-frontend
 ```
 
-#### Expected
-- `insight-agent/app/agent.py` matches `EXPECTED-agent.py` semantically:
-  - root agent with `sub_agents=[question_generator, sentiment_insight]`.
-  - both sub-agents with strict JSON-only instructions.
-  - `_load_dotenv()` helper or direct env reading.
+This chains: `npm create vite` → `npm install` → `make firebase-config`
+(populates `frontend/.env` with `VITE_FIREBASE_*`).
 
-#### Recovery
-- If Gemini forgets the App name → "the App.name must equal the directory name 'app' or ADK rejects sessions."
-- If preview model 404 → "fall back to gemini-2.5-flash; set GEMINI_MODEL in insight-agent/.env."
-
-### 6b — Start the playground
+### 5b · One mega-prompt (50–60')
 
 ```text
-@adk-builder run the agent on port 8080.
+> @frontend-builder Read conductor/tracks/<track-id>/spec.md.
+  The frontend/ directory was scaffolded with `npm create vite -- --template
+  react-ts` and frontend/.env is already populated with VITE_FIREBASE_*
+  keys (firebase-config.sh did this).
+
+  Build the COMPLETE Workshop Pulse frontend in one turn:
+  1. frontend/src/lib/firebase.ts — initialize app, call signInAnonymously()
+     on import, export auth + db. Read all VITE_FIREBASE_* from import.meta.env.
+     NO Google sign-in popup.
+  2. frontend/src/lib/agent.ts — ADK client (createSession via
+     POST /apps/app/users/{uid}/sessions, then POST /run with camelCase
+     keys appName, userId, sessionId, newMessage; parse last text part;
+     strip ```json fences). VITE_AGENT_ENDPOINT default http://localhost:8080.
+  3. frontend/src/App.tsx — <RouterProvider> with /admin and /p/:workshopId.
+  4. frontend/src/routes/Admin.tsx — list workshops, "Generate poll" button
+     (queryAgent generate-poll), "Analyze sentiment" button
+     (queryAgent analyze-sentiment), Recharts BarChart of vote counts,
+     small QR section pointing /p/:workshopId.
+  5. frontend/src/routes/Attendee.tsx — fetch poll by workshopId, render
+     vote form, submit to Firestore subcollection.
+  6. Install deps: firebase, react-router-dom, recharts, qrcode.
+
+  Use only those four libraries. No MUI / no Chakra / no shadcn.
 ```
 
-Or just `make agent-dev` in a second terminal.
+### Expected (matches `EXPECTED-firebase.ts`, `EXPECTED-agent.ts`, `EXPECTED-App.tsx`)
+- `signInAnonymously(auth)` on import in `firebase.ts`.
+- `agent.ts` uses camelCase keys + fence-stripping.
+- Both routes wired; QR rendered.
+- Only the four whitelisted deps installed.
 
-### 6c — Wire the frontend
-
-```text
-@frontend-builder Create frontend/src/lib/agent.ts that:
-- reads VITE_AGENT_ENDPOINT (default http://localhost:8080),
-- creates an ADK session via POST /apps/app/users/{userId}/sessions,
-- POSTs to /run with appName="app", userId="workshop-attendee",
-  sessionId=<created>, newMessage with parts[0].text = JSON.stringify({task, payload}),
-- extracts the last text part from the events array,
-- strips ```json fences,
-- returns parsed JSON.
-Then add a "Generate poll" button on the admin page that calls
-queryAgent('generate-poll', {workshop_topic, num_questions: 4, target_audience: 'developers'}).
-```
-
-#### Expected
-- `frontend/src/lib/agent.ts` matches `EXPECTED-agent.ts` semantically.
-- Button visible on `/admin` route.
-- Click → poll JSON rendered.
-
-#### Recovery
-- If Gemini calls `/run_sse` (streaming) → ask for `/run` (sync) for simplicity.
-- If session id missing → "the session-create response has `id`, not `sessionId`."
-
-### 6d — Demo: end-to-end roundtrip
-
-Audience clicks the button on `/admin`, sees a real poll generated by the
-sub-agent. Then ask Gemini:
-
-```text
-Now wire the attendee voting page so submitted votes get stored in Firestore
-under workshops/{w}/polls/{p}/votes, then add an "Analyze sentiment" button
-on /admin that calls queryAgent('analyze-sentiment', { workshop_id, votes })
-and renders the resulting mood as a colored badge plus a list of themes.
-```
+### Recovery
+- Google popup appears: *"replace signInWithPopup with signInAnonymously
+  on import; no Google provider in the workshop flow."*
+- Lowercase `/run` body keys: *"the ADK API uses camelCase: appName,
+  userId, sessionId, newMessage."*
+- Missing fence-stripping: *"strip ```json / ``` fences before JSON.parse."*
+- Wrong deps: *"keep deps to firebase, react-router-dom, recharts, qrcode."*
 
 ---
 
-## Slot 7 — Nano Banana + email (66–76')
+## Slot 6 · Mega-prompt ADK (60–75')
 
-```text
-@image-designer Build the post-workshop thank-you email pipeline. Activate
-the thank-you-email skill. Take the sentiment output from slot 6, generate a
-hero image with mcp_nanobanana_generate using the mood-to-style mapping, then
-create a Gmail draft via the Workspace MCP for each attendee. Output a single
-function compose_thank_you(workshopId, sentiment, recipients).
+### 6a · Materialize ADK scaffold (side terminal, 60–61')
+
+```bash
+make scaffold-agent
 ```
 
-#### Expected
-- `functions/email/compose_thank_you.ts` (or `.py`) with the pipeline.
-- Calls cached on `(workshopId, mood)`.
-- Gmail draft created (not sent).
+### 6b · One mega-prompt (61–72')
+
+```text
+> @adk-builder The insight-agent/ directory was scaffolded with
+  `agents-cli create insight-agent --prototype` and contains the default
+  weather/time ReAct agent. Activate the google-agents-cli-adk-code skill.
+
+  Rewrite insight-agent/app/agent.py per GEMINI.md:
+  - root_agent that routes on the `task` field of the user message
+  - question_generator sub-agent (workshop_topic -> poll JSON, JSON-only output)
+  - sentiment_insight sub-agent (votes -> {mood, themes, summary}, JSON-only output)
+  - Vertex AI gemini-3.1-pro-preview at location global
+  - App(name="app") matching the directory
+  - Read GEMINI_MODEL, GOOGLE_CLOUD_PROJECT, GOOGLE_CLOUD_LOCATION from env
+
+  Also create insight-agent/.env with the workshop project values.
+  Don't run the server; print the command `make agent-dev` for the user.
+```
+
+### Expected (matches `EXPECTED-agent.py`)
+- `agent.py` with root_agent + 2 sub-agents, JSON-only instructions.
+- `App(name="app")` matches dir.
+- `insight-agent/.env` with model + project + location.
+
+### Recovery
+- `App(name=…)` mismatch: *"the App.name must equal the directory name 'app'."*
+- Preview model 404: *"fall back to gemini-2.5-flash; set GEMINI_MODEL in
+  insight-agent/.env."*
+- JSON wrapped in markdown fences: *"add 'No preamble, no markdown fences,
+  only the JSON object' to each sub-agent instruction."*
+
+### 6c · Start the agent (side terminal, 72–75')
+
+```bash
+make agent-dev          # uvicorn on :8080
+```
+
+Smoke-test with curl as in RUNBOOK slot 6c.
 
 ---
 
-## Slot 8 — QR + Hosting deploy (76–84')
+## Slot 7 · Integration + audience demo (75–85')
 
-### 8a — QR code
-
-```text
-@frontend-builder Add a /admin/qr page that renders a QR code pointing to
-window.location.origin + '/p/' + workshopId. Use the qrcode npm package.
+```bash
+make frontend-dev
 ```
 
-### 8b — Deploy
-
-```text
-@backend-builder Activate the firebase-deploy-checklist skill. Walk through
-the six preflight steps. If all pass, ask me before running `firebase deploy
---only hosting,firestore:rules,firestore:indexes`.
-```
-
-Audience then scans the QR with their phone, signs in with Google, votes.
-Live data flows into Firestore. Admin page refreshes stats.
+No `gemini` prompts. Click around, demo, audience votes.
 
 ---
 
-## Slot 9 — Stretch: deploy ADK to Agent Engine (84–88')
+## Slot 8 · Wrap + homework (85–90')
 
 ```text
-@adk-builder Activate google-agents-cli-deploy. Deploy insight-agent to
-Agent Engine. After deploy succeeds, generate a Cloud Function proxy at
-functions/agentProxy.ts that verifies the Firebase ID token and forwards
-to the deployed reasoning engine. Then update VITE_AGENT_ENDPOINT in
-frontend/.env to point at the Cloud Function URL.
+> /memory add Lessons learned: <facilitator-notes>
 ```
 
-If time runs out, skip. Show the pre-built reference instead and explain.
-
----
-
-## Slot 10 — Wrap (88–90')
-
-```text
-/memory add Lessons learned from this workshop: <facilitator notes>
-```
-
-Final words on:
-- **A2A protocol** — agent-to-agent interop is the next frontier (one-line mention, point at the Multi-Agent A2A Medium post).
-- **`conductor` extension** — for graduating from "one workshop demo" to "many features in a managed project", install:
-  ```bash
-  gemini extensions install https://github.com/gemini-cli-extensions/conductor --consent
-  ```
-  then `/conductor:setup` once, `/conductor:newTrack` per feature.
-- **`agents-cli`** — already installed; remind that `adk-deploy-guide`,
-  `adk-eval-guide`, and `google-agents-cli-observability` skills cover what we
-  skipped today.
-
-Dismiss.
+Final words:
+- Google SSO upgrade — see `docs/HOMEWORK.md`.
+- Nano Banana thank-you email — see `docs/HOMEWORK.md`.
+- Agent Engine deploy + Cloud Function proxy — see `docs/HOMEWORK.md`.
+- A2A protocol — point at the Multi-Agent A2A Medium post.
 
 ---
 
@@ -281,16 +257,19 @@ Dismiss.
 
 | Symptom | Move |
 |---|---|
-| Gemini hallucinates a file path | "Read GEMINI.md again, then redo." |
+| Gemini hallucinates a path | "Read GEMINI.md / conductor/tracks/<id>/spec.md again, then redo." |
 | Subagent goes off-rails | `/restore` to the last checkpoint. |
 | Context > 70% used | `/compress`. |
-| Gemini ignores a skill | "Activate the X skill before continuing." |
-| Diff is huge and unfocused | "Show me a plan before writing code." (Plan Mode) |
-| Audience confused on skill vs subagent | Point at the always-visible mental-model slide. |
+| Skill ignored | "Activate the X skill before continuing." |
+| Diff is huge / unfocused | "Show me a plan first." (Plan Mode) |
+| Mega-prompt fails halfway | `/restore`, then re-issue same mega-prompt — idempotent. |
+| `frontend/.env` missing keys | `make firebase-config` (idempotent re-run). |
+| Anonymous auth not working | Firebase Console → Authentication → enable Anonymous; reload. |
 
 ## Time-budget reminders
 
-- Aim for **≤ 3 prompts per slot**. More than that = audience loses thread.
-- Keep each Gemini turn **under 90 seconds**. Interrupt and refine if longer.
-- If a sub-agent burns 4+ turns, hard-stop with `/compress` and re-issue a
-  tighter prompt.
+- **Slot 3 hard cap**: 40 minutes. Set a timer.
+- **Mega-prompts (4/5/6)**: aim for ≤ 5 min each. If a turn runs longer,
+  `/restore` and re-prompt with sharper constraints.
+- Total live `gemini` prompts: 5. If you find yourself typing a 6th, ask
+  why — there's likely a recovery move that's better than another prompt.

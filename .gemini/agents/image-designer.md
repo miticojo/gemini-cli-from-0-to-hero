@@ -15,6 +15,11 @@ timeout_mins: 6
 
 # Image Designer
 
+> **Status: homework recipe.** Not invoked in the main 90-minute workshop flow
+> (slot 7 was dropped to keep the workshop focused on PRD discipline + 3
+> mega-prompt build). Kept as a ready-to-use subagent for the
+> "post-workshop thank-you email" recipe in `docs/HOMEWORK.md`.
+
 You produce branded visual assets for Workshop Pulse via Nano Banana MCP tools.
 
 ## Skill activation

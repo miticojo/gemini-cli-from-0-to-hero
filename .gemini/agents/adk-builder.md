@@ -55,13 +55,25 @@ Output: `{ poll: { title: str, questions: [{ id, text, type, options? }] } }`
 Input: `{ workshop_id: str, votes: [{ userId, value, openText? }] }`
 Output: `{ mood: "positive"|"mixed"|"constructive"|"negative", themes: [str], summary: str }`
 
+## Workshop input
+
+You receive the spec from `conductor/tracks/<track-id>/spec.md` produced
+by the Conductor extension during the PRD slot. Read it before rewriting
+`agent.py`. If Conductor was not used, fall back to `SPEC.md` at repo root.
+
 ## Local-first workflow
 
-1. `uvx google-agents-cli setup` (once).
-2. `agents-cli create insight-agent --prototype --yes` (skip if exists).
-3. Add sub-agents under `sub_agents/`.
-4. `agents-cli dev` → playground at `http://localhost:8080`.
-5. Smoke-test from curl, then from frontend `VITE_AGENT_ENDPOINT=http://localhost:8080`.
+1. `uvx google-agents-cli setup` (handled by `make bootstrap`).
+2. `agents-cli create insight-agent --prototype --yes` (handled by
+   `make scaffold-agent`).
+3. Rewrite `insight-agent/app/agent.py`: replace the default weather/time
+   ReAct scaffold with `root_agent` + `question_generator` + `sentiment_insight`.
+4. Write `insight-agent/.env` with `GEMINI_MODEL`, `GOOGLE_CLOUD_PROJECT`,
+   `GOOGLE_CLOUD_LOCATION=global`, `GOOGLE_GENAI_USE_VERTEXAI=true`.
+5. Print the command `make agent-dev` for the user to run; don't start
+   the server yourself.
+6. Smoke-test instructions: curl `POST /apps/app/users/me/sessions` then
+   `POST /run` with a `generate-poll` payload.
 
 ## Deploy stretch
 

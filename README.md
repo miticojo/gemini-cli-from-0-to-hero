@@ -1,14 +1,15 @@
 # Gemini CLI — from zero to hero (90' workshop)
 
-End-to-end demo: build **Workshop Pulse**, a Google-authenticated feedback polling
-app, by orchestrating Gemini CLI with **extensions, MCP servers, custom skills,
-subagents, and an ADK insight-agent on Vertex AI**. Local-first; deploy is a
-stretch goal.
+End-to-end demo: build **Workshop Pulse**, an anonymous-auth feedback
+polling app, by orchestrating Gemini CLI with **the `conductor` extension
+for PRD discipline + 3 mega-prompts** — one per layer (backend, frontend,
+ADK agent on Vertex AI). Total live `gemini` prompts in the 90 minutes:
+**5**.
 
-> **Workshop env**: Google Cloud Shell. Everything below is verified to work on
-> Cloud Shell (default web preview ports 8080 + 8081) and on local macOS/Linux.
+> **Workshop env**: Google Cloud Shell. Everything verified to work on
+> Cloud Shell (web preview ports 8080 + 8081) and on local macOS/Linux.
 
-[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/YOUR-ORG/gemini-cli-from-0-to-hero&cloudshell_workspace=.&cloudshell_tutorial=docs/TUTORIAL.md)
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/miticojo/gemini-cli-from-0-to-hero&cloudshell_workspace=.&cloudshell_tutorial=docs/RUNBOOK.md)
 
 ---
 
@@ -16,38 +17,42 @@ stretch goal.
 
 | Layer | Tech |
 |---|---|
-| Frontend | Vite + React 19 + TypeScript, Firebase Auth (Google SSO), Recharts |
-| Backend | Firestore + role-based security rules + composite indexes |
-| Agent | Google ADK (Python), root + 2 sub-agents, Vertex AI `gemini-3.1-pro-preview` |
-| Image | Nano Banana extension (mood-aware hero for thank-you mail) |
-| Email | Workspace extension (Gmail draft, inline image) |
-| Deploy | (stretch) Agent Engine + Firebase Hosting + Cloud Function proxy |
+| Frontend | Vite + React 19 + TypeScript, **Firebase Anonymous Auth**, Recharts |
+| Backend | Firestore + anonymous-auth-friendly security rules + composite indexes |
+| Agent | Google ADK (Python), root + 2 sub-agents, Vertex AI `gemini-3.1-pro-preview` (`global`) |
+| PRD | `conductor` extension produces `conductor/tracks/<id>/spec.md` + `plan.md` |
+
+Out-of-scope today (recipes in `docs/HOMEWORK.md`):
+- Google SSO upgrade (rules already accept Anonymous **and** Google).
+- Nano Banana hero email pipeline.
+- Agent Engine deploy + Cloud Function proxy.
 
 ## Quickstart (Cloud Shell)
 
 ```bash
 # 1. clone
-git clone https://github.com/YOUR-ORG/gemini-cli-from-0-to-hero
+git clone https://github.com/miticojo/gemini-cli-from-0-to-hero
 cd gemini-cli-from-0-to-hero
 
-# 2. point to your GCP project
-gcloud config set project YOUR_PROJECT_ID
+# 2. dedicated gcloud profile + ADC for the workshop project
+scripts/gcloud-profile.sh setup workshop you@example.com your-gcp-project-id
 
-# 3. run the bootstrap (installs gemini-cli, agents-cli, firebase, uv, ADK deps, frontend deps)
+# 3. install global tooling (gemini, agents-cli, firebase, uv, conductor extension)
 make bootstrap
 
-# 4. start the agent (port 8080, ADK FastAPI playground)
-make agent-dev
+# 4. source the workspace env (Vertex AI vars)
+source .gemini/env.sh
 
-# 5. in a second tab, start the frontend (port 8081 on Cloud Shell, 5173 local)
-make frontend-dev
+# 5. verify everything works
+make gemini-test          # 4 ✓ in 30 seconds
 
-# 6. open Gemini CLI in a third tab and start the workshop
+# 6. open Gemini CLI and run the workshop slot by slot from docs/RUNBOOK.md
 gemini
 ```
 
-In Cloud Shell, click **Web Preview** → choose port 8080 to see the agent UI,
-and 8081 to see the frontend. Both ports are pre-allowed.
+The application code (`frontend/`, `insight-agent/`, `backend/`) is
+**generated during the workshop** — not committed. See `docs/RUNBOOK.md`
+for the full slot-by-slot script.
 
 ## Repo layout
 
@@ -57,40 +62,48 @@ and 8081 to see the frontend. Both ports are pre-allowed.
 ├── .gemini/
 │   ├── settings.json        # forces vertex-ai auth + default model
 │   ├── agents/              # 5 subagents pre-authored
-│   │   ├── spec-writer.md
-│   │   ├── frontend-builder.md
-│   │   ├── backend-builder.md
-│   │   ├── image-designer.md
-│   │   └── adk-builder.md
+│   │   ├── frontend-builder.md   # ★ active in workshop
+│   │   ├── backend-builder.md    # ★ active in workshop
+│   │   ├── adk-builder.md        # ★ active in workshop
+│   │   ├── spec-writer.md        # alternative to Conductor
+│   │   └── image-designer.md     # homework recipe
 │   └── skills/              # 3 workspace-tier skills
-│       ├── poll-schema-designer/
-│       ├── thank-you-email/
+│       ├── poll-schema-designer/   # ★ active in workshop
+│       ├── thank-you-email/        # homework recipe
 │       └── firebase-deploy-checklist/
 ├── scripts/
 │   ├── bootstrap.sh         # idempotent global tooling install
+│   ├── firebase-config.sh   # auto-populate frontend/.env via apps:sdkconfig
 │   ├── gcloud-profile.sh    # multi-project gcloud + ADC isolation
 │   └── gemini-smoke-test.sh # 4-test pre-workshop validator (make gemini-test)
-├── Makefile                 # bootstrap, scaffold-frontend, scaffold-agent, dev, test
+├── Makefile                 # bootstrap, scaffold-{frontend,agent}, dev, test
 ├── README.md
 └── docs/
     ├── RUNBOOK.md           # ★ facilitator runbook (open during workshop)
     ├── WORKSHOP-PLAN.md     # 90' high-level plan + risk matrix
     ├── CLOUDSHELL.md        # Cloud Shell-specific notes
-    └── reference/           # silent targets + prompt cheat sheet
+    ├── HOMEWORK.md          # post-workshop recipes (Google SSO, email, deploy)
+    └── reference/           # silent build targets + prompt cheat sheet
+        ├── EXPECTED-firebase.ts
+        ├── EXPECTED-firestore.rules
+        ├── EXPECTED-App.tsx
+        ├── EXPECTED-agent.ts
+        ├── EXPECTED-agent.py
+        └── EXPECTED-flow.md
 ```
 
-**No application code is committed.** The `frontend/`, `insight-agent/`,
-`backend/`, and `functions/` directories appear during the workshop:
+**No application code is committed.** During the workshop:
 
-- `frontend/` materializes via `make scaffold-frontend`
-  (`npm create vite@latest -- --template react-ts`) at slot 5b — then
-  Gemini CLI fills it.
-- `insight-agent/` materializes via `make scaffold-agent`
-  (`agents-cli create insight-agent --prototype`) at slot 6a — then Gemini
-  CLI rewrites the default scaffold into the two-sub-agent router.
+- `conductor/` materializes via `/conductor:setup` + `/conductor:newTrack`
+  (slot 3, 25 minutes — the pedagogical core).
 - `backend/` is generated by `@backend-builder` invoking the
-  `poll-schema-designer` skill at slot 5a.
-- `functions/` is generated at slots 7 and 9.
+  `poll-schema-designer` skill (slot 4, one mega-prompt).
+- `frontend/` materializes via `make scaffold-frontend` (which runs
+  `npm create vite` + `firebase-config.sh` to auto-populate `.env`),
+  then `@frontend-builder` fills it in one mega-prompt (slot 5).
+- `insight-agent/` materializes via `make scaffold-agent`
+  (`agents-cli create`), then `@adk-builder` rewrites the default scaffold
+  in one mega-prompt (slot 6).
 
 ## How the agent is wired
 
@@ -102,7 +115,7 @@ and 8081 to see the frontend. Both ports are pre-allowed.
                            ▼
 LOCAL  →  http://localhost:8080  (ADK FastAPI playground)
                            │
-DEPLOYED → Cloud Function proxy → IAM → Agent Engine reasoning engine
+DEPLOYED → Cloud Function proxy → IAM → Agent Engine reasoning engine  (homework)
                            │
               ┌────────────┴──────────────┐
               │  root_agent (orchestrator) │
@@ -112,48 +125,58 @@ DEPLOYED → Cloud Function proxy → IAM → Agent Engine reasoning engine
         (brief → poll JSON)    (votes → mood + themes)
 ```
 
-The frontend calls `POST /run` with `{ task, payload }` packed into the user
-message. The root agent transfers control to the right sub-agent and returns
-its JSON output verbatim.
+The frontend calls `POST /run` with `{ task, payload }` packed into the
+user message. The root agent transfers control to the right sub-agent and
+returns its JSON output verbatim.
 
 ## Two ADK use cases
 
 1. **`generate-poll`** — admin describes the workshop in plain text; the
-   `question_generator` returns a structured poll (mix of single / multi / open
-   questions, neutral wording, 3-5 options each).
-2. **`analyze-sentiment`** — votes are forwarded to `sentiment_insight` which
-   classifies mood (`positive` / `mixed` / `constructive` / `negative`),
-   extracts themes, and produces an admin summary that drives:
-   - the admin dashboard chart annotations,
-   - the Nano Banana hero style cue for the thank-you email,
-   - the body tone of the email itself.
+   `question_generator` returns a structured poll (mix of single / multi /
+   open questions, neutral wording, 3-5 options each).
+2. **`analyze-sentiment`** — votes are forwarded to `sentiment_insight`
+   which classifies mood (`positive` / `mixed` / `constructive` /
+   `negative`), extracts themes, and produces an admin summary that drives
+   the dashboard chart annotations.
+
+## Auth strategy
+
+**Default: Firebase Anonymous Auth.** The frontend calls
+`signInAnonymously()` once on import. No Google OAuth popup, no
+authorized-domains dance with Cloud Shell preview URLs, no per-attendee
+account setup. Each user gets a stable anonymous `uid` per browser via
+`browserLocalPersistence`. Firestore rules accept `request.auth != null`.
+
+**Optional: Google SSO** — full upgrade recipe in `docs/HOMEWORK.md`. The
+upgrade is purely a frontend swap because the rules already accept both
+providers (`request.auth != null`).
 
 ## Skills the workshop uses
 
 | Skill | Tier | What it does |
 |---|---|---|
-| `google-agents-cli-scaffold` | user (`~/.agents/skills/`) | scaffolds ADK projects |
-| `google-agents-cli-deploy` | user | deploys to Agent Engine / Cloud Run |
+| `google-agents-cli-adk-code` | user (`~/.agents/skills/`) | ADK Python idioms |
+| `google-agents-cli-scaffold` | user | scaffolds ADK projects |
+| `google-agents-cli-deploy` | user | deploys to Agent Engine / Cloud Run (homework) |
 | `google-agents-cli-eval` | user | LLM-as-judge evals + evalsets |
 | `google-agents-cli-observability` | user | OTel + Cloud Trace wiring |
-| `google-agents-cli-adk-code` | user | ADK Python idioms |
 | `google-agents-cli-publish` | user | publish agent definitions |
 | `google-agents-cli-workflow` | user | end-to-end ADK workflow |
-| `poll-schema-designer` | workspace (`.gemini/skills/`) | Firestore schema + rules |
-| `thank-you-email` | workspace | mood-aware Gmail draft + Nano Banana hero |
+| `poll-schema-designer` | workspace (`.gemini/skills/`) | Firestore schema + anonymous-auth rules |
+| `thank-you-email` | workspace | mood-aware Gmail draft + Nano Banana hero (homework) |
 | `firebase-deploy-checklist` | workspace | 6-step preflight before `firebase deploy` |
 
-`activate_skill` is invoked automatically when the description keywords match
-the user prompt; the workshop deliberately exercises several triggers.
+`activate_skill` is invoked automatically when the description keywords
+match the user prompt; the workshop exercises 2 skills via the 3 mega-prompts.
 
 ## Model
 
-- **Workshop**: Vertex AI `gemini-3.1-pro-preview` (set in `insight-agent/.env`).
-- **Rehearsal note**: if the preview model is not allowlisted on your project,
-  fall back via `GEMINI_MODEL=gemini-2.5-flash` in `insight-agent/.env`. The
-  agent code reads the env var at startup.
+- **Workshop**: Vertex AI `gemini-3.1-pro-preview` at location `global`.
+- **Fallback**: if the preview model is not allowlisted, set
+  `GEMINI_MODEL=gemini-2.5-flash` in `.gemini/env.sh`. The agent reads the
+  env var at startup.
 
-## Testing it locally without the frontend
+## Testing the agent locally without the frontend
 
 ```bash
 make agent-dev    # in tab 1
@@ -190,26 +213,32 @@ scripts/gcloud-profile.sh status     # or: make gcloud-status
 scripts/gcloud-profile.sh list       # or: make gcloud-list
 ```
 
-The script copies the ADC json to `~/.config/gcloud/profiles/<profile>/adc.json`
-on `setup`/`backup`, and swaps it back on `switch`. APIs (`aiplatform`,
-`firestore`, `cloudfunctions`, `run`, `firebase`, …) are enabled automatically
-during `setup`.
-
 ## Pre-flight (24h before workshop)
 
 - [ ] GCP project with billing enabled.
 - [ ] `aiplatform.googleapis.com` enabled.
-- [ ] `gemini-3.1-pro-preview` accessible (request allowlist if needed).
-- [ ] `firebase` project created and Auth → Google provider enabled.
-- [ ] `NANOBANANA_API_KEY` exported (workaround issue #20724).
+- [ ] `gemini-3.1-pro-preview` reachable on `global` location (curl probe in
+  `docs/CLOUDSHELL.md`).
+- [ ] Firebase project registered (`firebase projects:addfirebase
+  $GOOGLE_CLOUD_PROJECT`).
+- [ ] **Anonymous Auth enabled** in Firebase Console → Authentication →
+  Sign-in method (`firebase-config.sh` tries to enable it via REST).
 - [ ] Audience clones the repo and runs `make bootstrap` once.
 
 ## Documentation
 
-- **[`docs/RUNBOOK.md`](docs/RUNBOOK.md)** — facilitator runbook. Single self-contained guide for the live workshop: pre-flight, slot-by-slot prompts, expected outputs, recovery moves, success criteria. **Open this during delivery.**
-- [`docs/WORKSHOP-PLAN.md`](docs/WORKSHOP-PLAN.md) — 90-minute plan, slot by slot (high-level companion).
-- [`docs/CLOUDSHELL.md`](docs/CLOUDSHELL.md) — Cloud Shell quirks, web preview, auth gotchas.
-- [`docs/reference/`](docs/reference/) — silent reference targets (`EXPECTED-*.py/.tsx/.ts`) + the prompt-by-prompt cheat sheet `EXPECTED-flow.md`.
+- **[`docs/RUNBOOK.md`](docs/RUNBOOK.md)** — facilitator runbook. Single
+  self-contained guide for the live workshop: pre-flight, slot-by-slot
+  prompts, expected outputs, recovery moves, success criteria. **Open this
+  during delivery.**
+- [`docs/WORKSHOP-PLAN.md`](docs/WORKSHOP-PLAN.md) — 90' high-level plan
+  + risk matrix.
+- [`docs/CLOUDSHELL.md`](docs/CLOUDSHELL.md) — Cloud Shell quirks, web
+  preview, auth gotchas.
+- [`docs/HOMEWORK.md`](docs/HOMEWORK.md) — post-workshop recipes:
+  Google SSO, Nano Banana email, Agent Engine deploy.
+- [`docs/reference/`](docs/reference/) — silent reference targets
+  (`EXPECTED-*`) + prompt cheat sheet `EXPECTED-flow.md`.
 - [`GEMINI.md`](GEMINI.md) — project context, conventions, model config.
 
 ## License

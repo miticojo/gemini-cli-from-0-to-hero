@@ -3,23 +3,34 @@
  *
  * Talks to either the local ADK playground (port 8080) or the deployed
  * Cloud Function proxy. Endpoint switches via VITE_AGENT_ENDPOINT.
+ *
+ * The userId is the Firebase Anonymous Auth uid so each session is scoped
+ * to the actual signed-in user.
  */
+
+import { auth } from './firebase';
 
 const ENDPOINT = (import.meta.env.VITE_AGENT_ENDPOINT ?? 'http://localhost:8080').replace(/\/$/, '');
 const APP_NAME = 'app'; // ADK uses the agent directory name as app id
-const USER_ID = 'workshop-attendee';
 
 export type Task = 'generate-poll' | 'analyze-sentiment';
 
+function currentUid(): string {
+  const uid = auth.currentUser?.uid;
+  if (!uid) throw new Error('not signed in (anonymous auth has not completed yet)');
+  return uid;
+}
+
 export async function queryAgent(task: Task, payload: unknown): Promise<unknown> {
-  const sessionId = await createSession();
+  const userId = currentUid();
+  const sessionId = await createSession(userId);
 
   const res = await fetch(`${ENDPOINT}/run`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       appName: APP_NAME,
-      userId: USER_ID,
+      userId,
       sessionId,
       newMessage: {
         role: 'user',
@@ -45,8 +56,8 @@ function stripFences(s: string): string {
   return s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
 }
 
-async function createSession(): Promise<string> {
-  const res = await fetch(`${ENDPOINT}/apps/${APP_NAME}/users/${USER_ID}/sessions`, {
+async function createSession(userId: string): Promise<string> {
+  const res = await fetch(`${ENDPOINT}/apps/${APP_NAME}/users/${userId}/sessions`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({}),
