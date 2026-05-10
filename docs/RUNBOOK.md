@@ -1,11 +1,13 @@
-# Workshop Pulse — Facilitator Runbook (90 min)
+# Workshop Pulse — Facilitator Runbook (75 min default · 60 min compressed)
 
 Single-file operational guide. Open this during the workshop and scroll
 top-to-bottom.
 
 > **Audience**: developers · **Env**: Google Cloud Shell · **Goal**: build
 > Workshop Pulse end-to-end via Gemini CLI orchestration in 8 slots, with
-> ≤ 5 live `gemini` prompts after the setup phase.
+> exactly **3 live mega-prompts** (one per layer). The `conductor/` PRD is
+> pre-baked in the repo seed — slot 3 walks through it instead of generating
+> it live, saving 15 minutes for the build.
 >
 > Reference targets that should emerge from `gemini` live are in
 > `docs/reference/EXPECTED-{agent.py,App.tsx,agent.ts,firebase.ts,firestore.rules}`.
@@ -13,19 +15,36 @@ top-to-bottom.
 
 ---
 
+## Timeline overview
+
+| Slot | 75' default | 60' compressed | Topic |
+|---|---|---|---|
+| 1 | 0–5 | 0–3 | Setup smoke-test |
+| 2 | 5–15 | 3–8 | GEMINI.md + extensions + skills |
+| 3 | 15–25 | 8–15 | Conductor walkthrough (pre-baked) |
+| 4 | 25–33 | 15–22 | Mega-prompt backend |
+| 5 | 33–45 | 22–32 | Mega-prompt frontend |
+| 6 | 45–60 | 32–45 | Mega-prompt ADK |
+| 7 | 60–70 | 45–55 | Integration + audience demo |
+| 8 | 70–75 | 55–60 | Wrap + homework |
+
+Total live `gemini` prompts in either timeline: **3** (`@backend-builder`,
+`@frontend-builder`, `@adk-builder`). Conductor is pre-baked. Setup smoke
+test is `make gemini-test` — zero prompts.
+
 ## Table of contents
 
 - [Pre-flight T-24h](#pre-flight-t-24h)
 - [Pre-flight T-30min](#pre-flight-t-30min)
 - [Mental model (recurring)](#mental-model-recurring)
-- [Slot 1 · Setup smoke-test (0–5')](#slot-1--setup-smoke-test-05)
-- [Slot 2 · GEMINI.md + extensions + skills (5–15')](#slot-2--geminimd--extensions--skills-515)
-- [Slot 3 · Conductor PRD (15–40')](#slot-3--conductor-prd-1540)
-- [Slot 4 · Mega-prompt backend (40–48')](#slot-4--mega-prompt-backend-4048)
-- [Slot 5 · Mega-prompt frontend (48–60')](#slot-5--mega-prompt-frontend-4860)
-- [Slot 6 · Mega-prompt ADK (60–75')](#slot-6--mega-prompt-adk-6075)
-- [Slot 7 · Integration + audience demo (75–85')](#slot-7--integration--audience-demo-7585)
-- [Slot 8 · Wrap + homework (85–90')](#slot-8--wrap--homework-8590)
+- [Slot 1 · Setup smoke-test](#slot-1--setup-smoke-test-05)
+- [Slot 2 · GEMINI.md + extensions + skills](#slot-2--geminimd--extensions--skills-515)
+- [Slot 3 · Conductor walkthrough (pre-baked)](#slot-3--conductor-walkthrough-1525)
+- [Slot 4 · Mega-prompt backend](#slot-4--mega-prompt-backend-4048)
+- [Slot 5 · Mega-prompt frontend](#slot-5--mega-prompt-frontend-4860)
+- [Slot 6 · Mega-prompt ADK](#slot-6--mega-prompt-adk-6075)
+- [Slot 7 · Integration + audience demo](#slot-7--integration--audience-demo-7585)
+- [Slot 8 · Wrap + homework](#slot-8--wrap--homework-8590)
 - [Universal recovery moves](#universal-recovery-moves)
 - [Cut order if running long](#cut-order-if-running-long)
 - [Success criteria](#success-criteria)
@@ -118,14 +137,14 @@ ls -la
 Audience sees:
 - `GEMINI.md` — project memory.
 - `.gemini/agents/`, `.gemini/skills/`, `.gemini/settings.json`.
+- `conductor/` — **pre-baked PRD context** (slot 3 walks through it).
 - `scripts/`, `Makefile`, `docs/`.
 
-**No `frontend/`, no `insight-agent/`, no `backend/`, no `functions/`,
-no `conductor/`.**
+**No `frontend/`, no `insight-agent/`, no `backend/`, no `functions/`.**
 
-> "We start from zero. Everything you'll see in the next 85 minutes is
-> generated. The only thing pre-baked is the orchestration platform: the
-> agents, the skills, the runbook."
+> "We start with the orchestration platform — agents, skills, conductor
+> context — and we generate every line of application code in the next
+> 70 minutes through three mega-prompts."
 
 ---
 
@@ -153,70 +172,59 @@ Audience sees:
 
 ---
 
-## Slot 3 · Conductor PRD (15–40')
+## Slot 3 · Conductor walkthrough (15–25')
 
-This is the **pedagogical core** of the workshop. Spend the time. Don't rush.
+**The `conductor/` folder is pre-baked in the repo seed.** This is intentional:
+the workshop's pedagogical job is to teach the *discipline*, not to watch a
+wizard answer 10 questions. Time saved goes to building.
 
-### 3a · `/conductor:setup` — define the project (15–25')
+### 3a · Show the pre-baked artefacts (15–20')
 
-```text
-> /conductor:setup
+```bash
+ls conductor/
+tree conductor/        # or: find conductor -type f
 ```
 
-Conductor runs an interactive wizard. Walk the audience through each
-question. Use these answers (project context) but invite audience to
-suggest variants — this is where Conductor earns its 25 minutes.
+Audience sees:
+- `conductor/product.md` — vision + why-it-matters.
+- `conductor/tech-stack.md` — Vite + Firebase Anonymous + ADK + Vertex AI.
+- `conductor/workflow.md` — trunk-based, conventional commits.
+- `conductor/product-guidelines.md` — code style + security + API contracts.
+- `conductor/tracks.md` — track registry.
+- `conductor/tracks/bootstrap-foundation/{spec.md, plan.md, metadata.json, index.md}`.
 
-| Question | Answer |
-|---|---|
-| Project state | NEW (greenfield) |
-| Product name | Workshop Pulse |
-| Product vision | "Web app to collect real-time workshop feedback via anonymous polls. Admins create workshops + AI-generated polls; attendees vote with one tap. Admins see live stats + AI sentiment insights." |
-| Tech stack | Vite + React 19 + TypeScript strict; Firebase Anonymous Auth; Firestore; Google ADK Python on Vertex AI; model `gemini-3.1-pro-preview` at location `global`; deploy region `us-central1`. |
-| Workflow | Trunk-based, conventional commits. |
-| Code style | TypeScript strict + function components; Python 3.11+ with type hints + ADK idioms. |
-| Security | ADC only; Firebase Security Rules anonymous-auth-friendly (`request.auth != null` + `createdBy` ownership). |
-
-Output:
-- `conductor/index.md`
-- `conductor/product.md`
-- `conductor/tech-stack.md`
-- `conductor/workflow.md`
-- `conductor/product-guidelines.md`
-- `conductor/tracks.md` (empty registry)
+Open `product.md` and `tech-stack.md` and read aloud. Then open
+`tracks/bootstrap-foundation/spec.md` and `plan.md` — these are what the
+three mega-prompts read in slots 4/5/6.
 
 **Pedagogy line**:
-> "We just turned a brief into a managed artefact. This `conductor/` folder
-> is committable, diffable, replicable across the team. This is what
-> 'context-driven development' means."
+> "This folder is committable, diffable, replicable. Context lives next to
+> code. The build that follows is `≤ 5 prompts` because everything is
+> already specified. The hard work is done — the rest is execution."
 
-### 3b · `/conductor:newTrack` — first feature spec + plan (25–40')
+### 3b · How conductor would have generated this (20–25')
 
 ```text
-> /conductor:newTrack "Bootstrap Workshop Pulse foundation: admin creates
-  workshop, generates AI poll, displays QR. Attendee scans, signs in
-  anonymously, votes. Admin sees live stats and triggers sentiment analysis."
+> /conductor:setup            # interactive wizard: product, tech stack, workflow, guidelines
+> /conductor:newTrack "<feature description>"   # generates per-track spec + plan
 ```
 
-Conductor produces:
-- `conductor/tracks/<track-id>/spec.md` — Objective, Features, Requirements.
-- `conductor/tracks/<track-id>/plan.md` — multi-phase implementation plan
-  with checklists.
-- `conductor/tracks/<track-id>/metadata.json`.
-- `conductor/tracks/<track-id>/index.md`.
+Walk through the slash commands without running them. `setup` is one-time
+per project; `newTrack` runs once per feature. Both produce committable
+markdown. For a fresh project the audience would:
 
-Read `spec.md` aloud. Show `plan.md` — emphasise that the next three slots
-each consume one phase block of this plan in a single mega-prompt.
+1. `gemini extensions install conductor --consent` (already done by `make bootstrap`).
+2. `/conductor:setup` — answer ~6 questions about the product.
+3. `/conductor:newTrack "build the foundation"` — get a spec + multi-phase plan.
 
-**Pedagogy line**:
-> "Notice: we have not written one line of application code. We have a
-> spec, a plan, a folder structure that survives the workshop. The next 35
-> minutes are *just three prompts*. The build is the easy part because we
-> did the hard work here."
+**Optional live demo** (skip if compressed): run
+`/conductor:newTrack "Add user profile editing"` to show a SECOND track
+materialise. Don't implement it — just observe `conductor/tracks/<new-id>/`
+appear with a fresh `spec.md` + `plan.md`.
 
 ---
 
-## Slot 4 · Mega-prompt backend (40–48')
+## Slot 4 · Mega-prompt backend (25–33')
 
 ```text
 > @backend-builder Read conductor/tracks/<track-id>/spec.md and plan.md.
@@ -252,7 +260,7 @@ each consume one phase block of this plan in a single mega-prompt.
 
 ---
 
-## Slot 5 · Mega-prompt frontend (48–60')
+## Slot 5 · Mega-prompt frontend (33–45')
 
 ### 5a · Materialize Vite + Firebase env (48–50', side terminal)
 
@@ -316,7 +324,7 @@ Audience sees `frontend/.env` populated automatically. **No manual editing.**
 
 ---
 
-## Slot 6 · Mega-prompt ADK (60–75')
+## Slot 6 · Mega-prompt ADK (45–60')
 
 ### 6a · Materialize ADK scaffold (60–61', side terminal)
 
@@ -391,7 +399,7 @@ Last text part = poll JSON.
 
 ---
 
-## Slot 7 · Integration + audience demo (75–85')
+## Slot 7 · Integration + audience demo (60–70')
 
 ```bash
 make frontend-dev       # Vite on :8081 (Cloud Shell) or :5173 (local)
@@ -424,7 +432,7 @@ Live flow:
 
 ---
 
-## Slot 8 · Wrap + homework (85–90')
+## Slot 8 · Wrap + homework (70–75')
 
 ```text
 > /memory add Lessons learned: <facilitator-notes>
@@ -467,9 +475,11 @@ Repo template = audience's starting point. Dismiss.
 1. Drop **slot 8** — wrap in 30 seconds, hand out the homework link.
 2. Compress **slot 7** demo to facilitator-driven (skip audience phones,
    facilitator demos solo).
-3. Skip **slot 3b** new-track for a *second* feature (we only need one
-   track for the workshop demo).
-4. **Never drop slots 3a, 4, 5, 6** — pedagogical core (PRD discipline +
+3. Skip **slot 3b** (the optional `/conductor:newTrack` live demo for a
+   second feature). The pre-baked track 1 carries the workshop.
+4. Compress **slot 2** to a 5-min `gemini extensions list` + `/skills`
+   only, skip the deep narrative on Skill vs Subagent.
+5. **Never drop slots 3a, 4, 5, 6** — pedagogical core (PRD walkthrough +
    3 mega-prompts).
 
 ## Success criteria

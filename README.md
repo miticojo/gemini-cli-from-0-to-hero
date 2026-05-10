@@ -51,8 +51,10 @@ gemini
 ```
 
 The application code (`frontend/`, `insight-agent/`, `backend/`) is
-**generated during the workshop** — not committed. See `docs/RUNBOOK.md`
-for the full slot-by-slot script.
+**generated during the workshop** — not committed. The `conductor/` folder
+is pre-baked so slot 3 walks through it (10 minutes) instead of running a
+25-minute interactive `/conductor:setup` wizard. See `docs/RUNBOOK.md` for
+the full slot-by-slot script.
 
 ## Repo layout
 
@@ -60,17 +62,24 @@ for the full slot-by-slot script.
 .
 ├── GEMINI.md                # project context loaded by Gemini CLI
 ├── .gemini/
-│   ├── settings.json        # forces vertex-ai auth + default model
-│   ├── agents/              # 5 subagents pre-authored
-│   │   ├── frontend-builder.md   # ★ active in workshop
-│   │   ├── backend-builder.md    # ★ active in workshop
-│   │   ├── adk-builder.md        # ★ active in workshop
-│   │   ├── spec-writer.md        # alternative to Conductor
+│   ├── settings.json        # forces vertex-ai auth + default model (gemini-3-flash-preview)
+│   ├── agents/              # 5 subagents pre-authored, mixed model strategy
+│   │   ├── frontend-builder.md   # ★ active in workshop · gemini-3-flash-preview
+│   │   ├── backend-builder.md    # ★ active in workshop · gemini-3-flash-preview
+│   │   ├── adk-builder.md        # ★ active in workshop · gemini-3.1-pro-preview (complex Python)
+│   │   ├── spec-writer.md        # alternative to Conductor (homework)
 │   │   └── image-designer.md     # homework recipe
 │   └── skills/              # 3 workspace-tier skills
 │       ├── poll-schema-designer/   # ★ active in workshop
 │       ├── thank-you-email/        # homework recipe
 │       └── firebase-deploy-checklist/
+├── conductor/               # ★ PRE-BAKED PRD context (slot 3 walks through it)
+│   ├── product.md
+│   ├── tech-stack.md
+│   ├── workflow.md
+│   ├── product-guidelines.md
+│   ├── tracks.md
+│   └── tracks/bootstrap-foundation/{spec.md, plan.md, ...}
 ├── scripts/
 │   ├── bootstrap.sh         # idempotent global tooling install
 │   ├── firebase-config.sh   # auto-populate frontend/.env via apps:sdkconfig
@@ -80,7 +89,7 @@ for the full slot-by-slot script.
 ├── README.md
 └── docs/
     ├── RUNBOOK.md           # ★ facilitator runbook (open during workshop)
-    ├── WORKSHOP-PLAN.md     # 90' high-level plan + risk matrix
+    ├── WORKSHOP-PLAN.md     # 75' / 60' timeline + risk matrix
     ├── CLOUDSHELL.md        # Cloud Shell-specific notes
     ├── HOMEWORK.md          # post-workshop recipes (Google SSO, email, deploy)
     └── reference/           # silent build targets + prompt cheat sheet
