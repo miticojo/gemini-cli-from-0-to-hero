@@ -40,17 +40,22 @@ scaffold-frontend:
 	  echo "frontend/ already scaffolded"; \
 	else \
 	  npm create vite@latest $(FRONTEND_DIR) -- --template react-ts -y && \
-	  cd $(FRONTEND_DIR) && npm install && \
+	  cd $(FRONTEND_DIR) && \
+	  npm install && \
 	  npm install firebase react-router-dom recharts qrcode && \
 	  npm install -D @types/qrcode && \
-	  python3 -c "import json; p='$(FRONTEND_DIR)/tsconfig.app.json'; \
-	    import os; \
-	    f=p if os.path.exists(p) else '$(FRONTEND_DIR)/tsconfig.json'; \
-	    d=json.load(open(f)); \
-	    d.setdefault('compilerOptions',{})['noUnusedLocals']=False; \
-	    d['compilerOptions']['noUnusedParameters']=False; \
-	    json.dump(d, open(f,'w'), indent=2); \
-	    print('relaxed tsconfig at', f)"; \
+	  for f in tsconfig.app.json tsconfig.json; do \
+	    if [ -f "$$f" ]; then \
+	      sed -i.bak -E \
+	        -e 's/"noUnusedLocals" *: *true/"noUnusedLocals": false/' \
+	        -e 's/"noUnusedParameters" *: *true/"noUnusedParameters": false/' \
+	        -e 's/"verbatimModuleSyntax" *: *true/"verbatimModuleSyntax": false/' \
+	        -e 's/"erasableSyntaxOnly" *: *true/"erasableSyntaxOnly": false/' \
+	        "$$f" && \
+	      rm -f "$$f.bak" && \
+	      echo "relaxed tsconfig at frontend/$$f"; \
+	    fi; \
+	  done; \
 	fi
 	@$(MAKE) firebase-config
 

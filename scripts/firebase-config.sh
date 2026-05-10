@@ -53,14 +53,38 @@ log "project: ${PROJECT_ID}"
 command -v firebase >/dev/null 2>&1 \
   || die "firebase CLI not installed. Run: npm install -g firebase-tools"
 
+# Helper: write a stub .env so the frontend dev server can boot. Real values
+# can be filled later by re-running this script (after `firebase login` etc.).
+write_stub_env() {
+  local reason="$1"
+  warn "writing stub frontend/.env (${reason})"
+  warn "after fixing the issue, re-run: make firebase-config"
+  cat > "$ENV_FILE" <<EOF
+# STUB: populated by firebase-config.sh fallback (${reason}).
+# Replace these with real Firebase config: \`firebase apps:sdkconfig WEB --json\`.
+VITE_FIREBASE_API_KEY=AIzaSy-stub-key-replace-me
+VITE_FIREBASE_AUTH_DOMAIN=${PROJECT_ID}.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=${PROJECT_ID}
+VITE_FIREBASE_APP_ID=1:000000000000:web:0000000000000000000000
+VITE_AGENT_ENDPOINT=http://localhost:8080
+EOF
+  exit 0
+}
+
+# Check firebase CLI auth state.
+if ! firebase login:list 2>&1 | grep -q "Logged in as"; then
+  write_stub_env "firebase CLI not logged in — run \`firebase login\` then re-try"
+fi
+
 # Ensure Firebase is enabled on the project.
 if ! firebase projects:list --json 2>/dev/null \
        | python3 -c "import sys,json; d=json.load(sys.stdin); ids=[p['projectId'] for p in d.get('result',[])]; sys.exit(0 if '${PROJECT_ID}' in ids else 1)"
 then
   warn "project ${PROJECT_ID} is not registered with Firebase yet."
   log "registering Firebase on the project (firebase projects:addfirebase)..."
-  firebase projects:addfirebase "$PROJECT_ID" --quiet \
-    || die "failed to register Firebase on ${PROJECT_ID}. Check billing + permissions."
+  if ! firebase projects:addfirebase "$PROJECT_ID" 2>&1; then
+    write_stub_env "could not register Firebase on ${PROJECT_ID} (auth/billing/permissions)"
+  fi
   ok "Firebase registered on ${PROJECT_ID}"
 fi
 
