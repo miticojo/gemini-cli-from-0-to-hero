@@ -402,16 +402,47 @@ Last text part = poll JSON.
 ## Slot 7 · Integration + audience demo (60–70')
 
 ```bash
-make frontend-dev       # Vite on :8081 (Cloud Shell) or :5173 (local)
+make agent-dev &        # tab 1 — agent on :8080
+make frontend-dev &     # tab 2 — Vite on :8081 (Cloud Shell) or :5173 (local)
 ```
 
-In Cloud Shell, click **Web Preview** → port 8081. Audience opens it on
-their phones (preview URL works on the public internet for the duration
-of the session — Anonymous Auth means no domain whitelist needed).
+### Expose to audience
 
-Live flow:
+#### On Cloud Shell (default workshop env)
+
+```bash
+make expose
+```
+
+Auto-detects Cloud Shell, calls `cloudshell get-web-host-url` for ports
+8080 and 8081, patches `frontend/.env`'s `VITE_AGENT_ENDPOINT` to the
+public 8080 URL, and prints both public URLs. **Restart `make frontend-dev`**
+so Vite picks up the new env. Audience hits the 8081 URL — the QR rendered
+on `/admin` already uses `window.location.origin`, so it works
+automatically.
+
+#### On local Mac (rehearsal or in-person session away from Cloud Shell)
+
+Two options:
+
+```bash
+# Option A: Cloudflare Tunnel (free, no signup, two terminals)
+cloudflared tunnel --url http://localhost:8080    # agent
+cloudflared tunnel --url http://localhost:5173    # frontend
+# update VITE_AGENT_ENDPOINT in frontend/.env to the agent tunnel URL,
+# then restart `make frontend-dev`
+
+# Option B: Firebase Hosting (permanent URL)
+make publish
+# builds frontend, writes firebase.json + .firebaserc if missing,
+# deploys to https://<project>.web.app
+# pair with `cloudflared` for the agent endpoint
+```
+
+### Live flow
+
 1. Facilitator opens `/admin`, clicks "Generate poll".
-2. Audience scans QR (Cloud Shell preview URL → `/p/<workshopId>`).
+2. Audience scans QR (Cloud Shell or Firebase Hosting URL → `/p/<workshopId>`).
 3. Audience votes once each (`signInAnonymously` happens transparently).
 4. Facilitator clicks "Analyze sentiment" — mood + themes render.
 5. Recharts updates with real vote counts.
@@ -420,15 +451,17 @@ Live flow:
 - `firebase-config.sh` populated env vars.
 - Anonymous Auth needs zero OAuth wiring.
 - Three mega-prompts produced consistent code.
+- `make expose` (Cloud Shell) or `make publish` (Mac) makes everything
+  internet-reachable.
 
 ### Recovery
+- `cloudshell get-web-host-url` not found: use the **Web Preview** button
+  in the toolbar manually.
 - Port collision: `make frontend-dev VITE_PORT=8082`.
-- Anonymous Auth disabled: open Firebase Console → Authentication →
-  Sign-in method → enable Anonymous (`firebase-config.sh` should have done
-  it; verify).
-- Vite preview blocked: confirm `vite.config.ts` allows
-  `*.cloudshell.dev` host (the scaffold default + `@frontend-builder`
-  should have configured it).
+- Anonymous Auth disabled: Firebase Console → Authentication → enable Anonymous.
+- Vite preview blocked: `vite.config.ts` must allow `*.cloudshell.dev`
+  host (default scaffold + `@frontend-builder` configures it).
+- `make publish` first run: needs `firebase login` (interactive) once.
 
 ---
 

@@ -10,7 +10,7 @@ PYTHON ?= python3
 FRONTEND_PORT := $(shell [ "$$CLOUD_SHELL" = "true" ] && echo 8081 || echo 5173)
 AGENT_PORT := 8080
 
-.PHONY: help bootstrap scaffold-frontend scaffold-agent firebase-config agent-dev agent-test frontend-dev frontend-build clean preview-info gcloud-status gcloud-list gemini-test
+.PHONY: help bootstrap scaffold-frontend scaffold-agent firebase-config agent-dev agent-test frontend-dev frontend-build clean preview-info expose publish gcloud-status gcloud-list gemini-test
 
 help:
 	@echo "Setup:"
@@ -25,6 +25,10 @@ help:
 	@echo "  frontend-dev       Start Vite dev server on :$(FRONTEND_PORT)"
 	@echo "  frontend-build     Production build of frontend"
 	@echo "  preview-info       Print Cloud Shell web-preview URLs"
+	@echo ""
+	@echo "Publish:"
+	@echo "  expose             [Cloud Shell] Get public preview URLs + patch frontend/.env"
+	@echo "  publish            [Local] firebase deploy --only hosting (permanent URL)"
 	@echo ""
 	@echo "Ops:"
 	@echo "  gcloud-status      Show active gcloud profile / ADC state"
@@ -112,6 +116,72 @@ gcloud-list:
 
 gemini-test:
 	@bash scripts/gemini-smoke-test.sh
+
+expose:
+	@if [ "$$CLOUD_SHELL" = "true" ]; then \
+	  agent_url=$$(cloudshell get-web-host-url --port=$(AGENT_PORT) 2>/dev/null); \
+	  fe_url=$$(cloudshell get-web-host-url --port=$(FRONTEND_PORT) 2>/dev/null); \
+	  if [ -z "$$agent_url" ] || [ -z "$$fe_url" ]; then \
+	    echo "✗ cloudshell get-web-host-url failed."; \
+	    echo "  Use the 'Web Preview' button in the toolbar manually."; \
+	    exit 1; \
+	  fi; \
+	  if [ -f $(FRONTEND_DIR)/.env ]; then \
+	    sed -i.bak "s|^VITE_AGENT_ENDPOINT=.*|VITE_AGENT_ENDPOINT=$$agent_url|" $(FRONTEND_DIR)/.env && \
+	    rm -f $(FRONTEND_DIR)/.env.bak; \
+	    echo "✓ patched $(FRONTEND_DIR)/.env: VITE_AGENT_ENDPOINT=$$agent_url"; \
+	  else \
+	    echo "! $(FRONTEND_DIR)/.env missing — run 'make scaffold-frontend' first"; \
+	  fi; \
+	  echo ""; \
+	  echo "  agent (8080):    $$agent_url"; \
+	  echo "  frontend (8081): $$fe_url"; \
+	  echo ""; \
+	  echo "  → restart 'make frontend-dev' so vite picks up the new env"; \
+	  echo "  → audience scans QR rendered on $$fe_url/admin (qrcode points to $$fe_url/p/<workshopId>)"; \
+	else \
+	  echo "Not running in Cloud Shell. Options for exposing local servers:"; \
+	  echo ""; \
+	  echo "  Cloudflare Tunnel (free, no signup):"; \
+	  echo "    cloudflared tunnel --url http://localhost:$(AGENT_PORT)    # agent (tab 1)"; \
+	  echo "    cloudflared tunnel --url http://localhost:$(FRONTEND_PORT) # frontend (tab 2)"; \
+	  echo "    Then update VITE_AGENT_ENDPOINT in $(FRONTEND_DIR)/.env to the agent tunnel URL."; \
+	  echo ""; \
+	  echo "  Firebase Hosting (permanent URL, frontend only):"; \
+	  echo "    make publish     # builds and deploys frontend to <project>.web.app"; \
+	  echo "    Pair with cloudflared for the agent endpoint."; \
+	fi
+
+publish: frontend-build
+	@if ! firebase login:list 2>&1 | grep -q "Logged in as"; then \
+	  echo "✗ firebase CLI not logged in."; \
+	  echo "  Run: firebase login"; \
+	  exit 1; \
+	fi
+	@if [ ! -f firebase.json ]; then \
+	  echo "writing firebase.json (hosting points to $(FRONTEND_DIR)/dist)..."; \
+	  printf '%s\n' \
+	    '{' \
+	    '  "hosting": {' \
+	    '    "public": "$(FRONTEND_DIR)/dist",' \
+	    '    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],' \
+	    '    "rewrites": [{ "source": "**", "destination": "/index.html" }]' \
+	    '  }' \
+	    '}' > firebase.json; \
+	fi
+	@if [ ! -f .firebaserc ]; then \
+	  proj=$$(gcloud config get-value project 2>/dev/null); \
+	  if [ -z "$$proj" ] || [ "$$proj" = "(unset)" ]; then \
+	    echo "✗ no default GCP project. Run: gcloud config set project <id>"; exit 1; \
+	  fi; \
+	  printf '{"projects":{"default":"%s"}}\n' "$$proj" > .firebaserc; \
+	  echo "wrote .firebaserc → project $$proj"; \
+	fi
+	firebase deploy --only hosting
+	@proj=$$(python3 -c "import json; print(json.load(open('.firebaserc'))['projects']['default'])"); \
+	  echo ""; \
+	  echo "  Public URL:  https://$$proj.web.app"; \
+	  echo "  Audience can scan QR rendered at https://$$proj.web.app/admin"
 
 clean:
 	rm -rf $(AGENT_DIR)/.venv
