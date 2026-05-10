@@ -7,7 +7,7 @@ tools:
   - replace
   - search_file_content
   - glob
-model: gemini-3.1-pro-preview
+model: gemini-3-flash-preview
 temperature: 0.6
 max_turns: 8
 timeout_mins: 6

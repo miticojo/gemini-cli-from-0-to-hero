@@ -93,16 +93,18 @@ paste all answers as a single block.
 
 ```text
 > @backend-builder Read conductor/tracks/<track-id>/spec.md and plan.md.
-  Activate the poll-schema-designer skill.
 
-  Generate the COMPLETE Firestore data model for Workshop Pulse:
+  STEP 1: activate_skill('poll-schema-designer') — mandatory.
+
+  STEP 2: Generate the COMPLETE Firestore data model for Workshop Pulse:
   - backend/firestore.schema.md
-  - backend/firestore.rules using ANONYMOUS auth: any signed-in user
-    (anonymous OR Google) can read polls and write exactly one vote per
-    (pollId, userId). Admin distinction is by `createdBy == request.auth.uid`
-    on the workshop doc. No custom claims required.
+  - backend/firestore.rules using ANONYMOUS auth: request.auth != null
+    sufficient; admin via createdBy == request.auth.uid; vote uniqueness via
+    voteId == request.auth.uid (do NOT use exists()). No custom claims,
+    no users/ collection.
   - backend/firestore.indexes.json with the composite index on votes by
     (pollId asc, createdAt asc).
+
   Stop when all three files exist; do not run any deploy.
 ```
 
@@ -141,27 +143,30 @@ This chains: `npm create vite` → `npm install` → `make firebase-config`
 ```text
 > @frontend-builder Read conductor/tracks/<track-id>/spec.md.
   The frontend/ directory was scaffolded with `npm create vite -- --template
-  react-ts` and frontend/.env is already populated with VITE_FIREBASE_*
-  keys (firebase-config.sh did this).
+  react-ts`, deps (firebase, react-router-dom, recharts, qrcode, @types/qrcode)
+  are installed, frontend/.env is populated with VITE_FIREBASE_*, and
+  tsconfig has noUnusedLocals=false. Do NOT call npm install.
 
   Build the COMPLETE Workshop Pulse frontend in one turn:
   1. frontend/src/lib/firebase.ts — initialize app, call signInAnonymously()
      on import, export auth + db. Read all VITE_FIREBASE_* from import.meta.env.
      NO Google sign-in popup.
-  2. frontend/src/lib/agent.ts — ADK client (createSession via
-     POST /apps/app/users/{uid}/sessions, then POST /run with camelCase
-     keys appName, userId, sessionId, newMessage; parse last text part;
-     strip ```json fences). VITE_AGENT_ENDPOINT default http://localhost:8080.
+  2. frontend/src/lib/agent.ts — Export `type Task = 'generate-poll' | 'analyze-sentiment'`
+     and `queryAgent(task: Task, payload: unknown)`. Create session via
+     POST /apps/app/users/{uid}/sessions (use auth.currentUser.uid for {uid}),
+     then POST /run with body { appName: 'app', userId, sessionId, newMessage }.
+     Parse last text part. Strip ```json fences before JSON.parse.
+     VITE_AGENT_ENDPOINT default http://localhost:8080.
   3. frontend/src/App.tsx — <RouterProvider> with /admin and /p/:workshopId.
   4. frontend/src/routes/Admin.tsx — list workshops, "Generate poll" button
-     (queryAgent generate-poll), "Analyze sentiment" button
-     (queryAgent analyze-sentiment), Recharts BarChart of vote counts,
-     small QR section pointing /p/:workshopId.
+     calling queryAgent('generate-poll', {...}), "Analyze sentiment" button
+     calling queryAgent('analyze-sentiment', {...}), Recharts BarChart of vote
+     counts, QR section rendering window.location.origin + '/p/' + workshopId.
   5. frontend/src/routes/Attendee.tsx — fetch poll by workshopId, render
-     vote form, submit to Firestore subcollection.
-  6. Install deps: firebase, react-router-dom, recharts, qrcode.
+     vote form, submit to Firestore with voteId === auth.currentUser.uid.
 
-  Use only those four libraries. No MUI / no Chakra / no shadcn.
+  Constraints: only the four installed libraries. No MUI / Chakra / shadcn.
+  Verify `tsc -b --noEmit` runs clean as the last step.
 ```
 
 ### Expected (matches `EXPECTED-firebase.ts`, `EXPECTED-agent.ts`, `EXPECTED-App.tsx`)
@@ -193,18 +198,23 @@ make scaffold-agent
 ```text
 > @adk-builder The insight-agent/ directory was scaffolded with
   `agents-cli create insight-agent --prototype` and contains the default
-  weather/time ReAct agent. Activate the google-agents-cli-adk-code skill.
+  weather/time ReAct agent.
 
-  Rewrite insight-agent/app/agent.py per GEMINI.md:
+  STEP 1: activate_skill('google-agents-cli-adk-code') — mandatory.
+
+  STEP 2: Rewrite insight-agent/app/agent.py per GEMINI.md:
   - root_agent that routes on the `task` field of the user message
-  - question_generator sub-agent (workshop_topic -> poll JSON, JSON-only output)
-  - sentiment_insight sub-agent (votes -> {mood, themes, summary}, JSON-only output)
+  - question_generator sub-agent (workshop_topic -> poll JSON, JSON-only,
+    no markdown fences)
+  - sentiment_insight sub-agent (votes -> {mood, themes, summary}, JSON-only,
+    no markdown fences)
   - Vertex AI gemini-3.1-pro-preview at location global
-  - App(name="app") matching the directory
+  - App(name="app") matching the directory (mandatory or ADK rejects sessions)
   - Read GEMINI_MODEL, GOOGLE_CLOUD_PROJECT, GOOGLE_CLOUD_LOCATION from env
 
-  Also create insight-agent/.env with the workshop project values.
-  Don't run the server; print the command `make agent-dev` for the user.
+  STEP 3: Create insight-agent/.env with workshop project values.
+
+  STEP 4: Print `make agent-dev`. Do NOT start the server.
 ```
 
 ### Expected (matches `EXPECTED-agent.py`)

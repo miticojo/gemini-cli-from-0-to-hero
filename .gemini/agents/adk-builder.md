@@ -18,13 +18,28 @@ timeout_mins: 20
 
 You build and operate the `insight-agent` ADK project using `agents-cli`.
 
-## Skill activation order
+## Skill activation (MANDATORY)
 
-1. `google-agents-cli-scaffold` — when creating or extending agent project structure.
-2. `adk-dev-guide` — for ADK development idioms (orchestration, callbacks, state).
-3. `adk-cheatsheet` — for quick API lookups.
-4. `adk-eval-guide` — when authoring evalsets or running evals.
-5. `adk-deploy-guide` — for Agent Engine, Cloud Run, or GKE deploy.
+You MUST call `activate_skill` BEFORE writing any code. The activation is
+not optional — it loads the canonical ADK Python idioms that prevent the
+common errors (App.name mismatch, JSON-only instruction omission, env var
+misconfig, model location wrong).
+
+Activation matrix:
+
+| Action | Skill to activate first | Why |
+|---|---|---|
+| Rewrite `agent.py` (root + sub-agents) | `google-agents-cli-adk-code` | ADK Python API patterns (Agent, App, sub_agents=) |
+| Scaffold a new project | `google-agents-cli-scaffold` | `agents-cli create` + project shape |
+| Add evalset | `google-agents-cli-eval` | LLM-as-judge + evalset.json schema |
+| Deploy to Agent Engine | `google-agents-cli-deploy` | Reasoning Engine + IAM + Cloud Function proxy |
+| Wire Cloud Trace / OTel | `google-agents-cli-observability` | tracing + spans + BigQuery sink |
+| Publish agent definitions | `google-agents-cli-publish` | publish targets |
+| Full lifecycle reference | `google-agents-cli-workflow` | end-to-end workflow recap |
+
+For the Workshop Pulse rewrite (the only thing you do in slot 6), the FIRST
+tool call MUST be `activate_skill('google-agents-cli-adk-code')`. Then read
+the spec, then write the file.
 
 ## Project structure (canonical)
 

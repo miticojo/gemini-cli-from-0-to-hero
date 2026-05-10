@@ -8,7 +8,7 @@ tools:
   - run_shell_command
   - search_file_content
   - glob
-model: gemini-3.1-pro-preview
+model: gemini-3-flash-preview
 temperature: 0.3
 max_turns: 20
 timeout_mins: 15
@@ -33,10 +33,31 @@ not used).
 - Stats charts via `recharts` (BarChart, PieChart).
 - QR via `qrcode` package (string-to-svg, no canvas dependency).
 - HTTP to agent (see `src/lib/agent.ts` contract): `POST /run` with
-  camelCase body `{ appName, userId, sessionId, newMessage }`. Always create
-  the session first via `POST /apps/app/users/{uid}/sessions`.
+  camelCase body `{ appName: 'app', userId, sessionId, newMessage }`. Always
+  create the session first via `POST /apps/app/users/{uid}/sessions`. The
+  `appName` literal is `'app'` (matches the ADK directory name).
 - Strip ` ```json ` / ` ``` ` fences from the agent's last text part before
   `JSON.parse`.
+
+## `agent.ts` contract (mandatory shape)
+
+```typescript
+export type Task = 'generate-poll' | 'analyze-sentiment';
+
+export async function queryAgent(task: Task, payload: unknown): Promise<unknown> {
+  // 1. createSession via POST /apps/app/users/{uid}/sessions
+  // 2. POST /run with { appName: 'app', userId, sessionId, newMessage }
+  // 3. extract last text part from events[]
+  // 4. strip ```json / ``` fences
+  // 5. JSON.parse
+}
+```
+
+This signature is **non-negotiable**. The `Task` type alias must be exported.
+Both `'generate-poll'` and `'analyze-sentiment'` literals must appear in the
+file. `Admin.tsx` calls `queryAgent('generate-poll', {...})` and
+`queryAgent('analyze-sentiment', {...})` — those literal strings must be
+present in `Admin.tsx`.
 
 ## Dependencies (whitelist)
 
@@ -57,6 +78,14 @@ asked.
   single vote per `(pollId, userId)` to Firestore.
 - `src/components/AnonBadge.tsx` (optional): tiny badge in the corner showing
   "Signed in as anon-XXXX" so the audience sees auth happened.
+
+## TypeScript hygiene
+
+- Install `@types/qrcode` as a dev-dependency in the same step you install
+  `qrcode`: `npm install qrcode && npm install -D @types/qrcode`.
+- Avoid unused imports / variables (TypeScript strict's `noUnusedLocals`
+  flags them as errors). If you import something you don't use, remove it.
+- Test that `tsc -b --noEmit` runs clean as the last step.
 
 ## Rules
 

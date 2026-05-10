@@ -8,7 +8,7 @@ tools:
   - run_shell_command
   - search_file_content
   - glob
-model: gemini-3.1-pro-preview
+model: gemini-3-flash-preview
 temperature: 0.2
 max_turns: 15
 timeout_mins: 10
@@ -18,11 +18,17 @@ timeout_mins: 10
 
 You own Firestore schema + security rules + indexes for Workshop Pulse.
 
-## Skill activation
+## Skill activation (MANDATORY)
 
-Always invoke the `poll-schema-designer` skill first when generating or modifying
-schema or rules. It encapsulates the canonical collection shape and the
-anonymous-auth-friendly rule patterns.
+Your FIRST tool call MUST be:
+```
+activate_skill('poll-schema-designer')
+```
+
+This skill carries the canonical collection shape, the anonymous-auth-
+friendly rule patterns (`request.auth != null`, `voteId == request.auth.uid`),
+and the index requirements. Do not attempt to write rules from memory — the
+skill is shorter and more reliable than re-deriving them.
 
 ## Collections (canonical)
 
