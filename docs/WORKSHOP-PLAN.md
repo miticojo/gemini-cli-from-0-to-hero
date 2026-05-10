@@ -22,7 +22,7 @@ Goal: deliver Workshop Pulse end-to-end via Gemini CLI orchestration with
 | 4 | 25–33 | 15–22 | Mega-prompt **backend** (`@backend-builder` + skill) | 1 |
 | 5 | 33–45 | 22–32 | Mega-prompt **frontend** (`@frontend-builder`)    | 1 |
 | 6 | 45–60 | 32–45 | Mega-prompt **ADK** (`@adk-builder` + skill)      | 1 |
-| 7 | 60–70 | 45–55 | Integration + audience demo                       | 0 |
+| 7 | 60–70 | 45–55 | Integration + audience demo (`make expose` / `make publish`) | 0 |
 | 8 | 70–75 | 55–60 | Wrap + homework                                   | 0 |
 
 **Total**: 3 live prompts. 75 min default, 60 min when compressed.

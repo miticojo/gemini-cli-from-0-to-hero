@@ -48,6 +48,11 @@ make gemini-test          # 4 ✓ in 30 seconds
 
 # 6. open Gemini CLI and run the workshop slot by slot from docs/RUNBOOK.md
 gemini
+
+# 7. (slot 7, after the build) expose to audience phones
+make expose          # [Cloud Shell] auto preview URLs + patch frontend/.env
+# OR (running from local Mac/Linux):
+make publish         # [Local] firebase deploy --only hosting → <project>.web.app
 ```
 
 The application code (`frontend/`, `insight-agent/`, `backend/`) is

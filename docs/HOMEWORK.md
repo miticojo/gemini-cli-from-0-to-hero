@@ -104,6 +104,38 @@ export NANOBANANA_API_KEY=…
 
 ---
 
+## Recipe 2.5 — Frontend on Firebase Hosting (permanent URL)
+
+**Goal**: replace the Cloud Shell preview URL (session-life only) with a
+permanent `https://<project>.web.app` URL the audience can hit any time.
+
+### One command (already in the Makefile)
+
+```bash
+make publish
+```
+
+The target builds `frontend/dist` and runs `firebase deploy --only hosting`.
+On first run it generates `firebase.json` (rewriting `**` to `/index.html`
+for the SPA) and `.firebaserc` (default project from `gcloud config`).
+Pre-requisite: `firebase login` once.
+
+### Pair with the agent
+
+Firebase Hosting only serves static files. The agent at `localhost:8080`
+still needs to be reachable by the deployed frontend. Two options:
+
+```bash
+# A. Cloudflared tunnel (free, no signup)
+cloudflared tunnel --url http://localhost:8080
+# get the trycloudflare.com URL, paste it into frontend/.env as VITE_AGENT_ENDPOINT,
+# rerun `make publish`
+
+# B. Deploy the agent too — see Recipe 3 below
+```
+
+---
+
 ## Recipe 3 — Agent Engine deploy + Cloud Function proxy
 
 **Goal**: replace `http://localhost:8080` with a managed Vertex AI Agent

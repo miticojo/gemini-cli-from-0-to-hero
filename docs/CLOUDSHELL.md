@@ -160,6 +160,27 @@ per-track `spec.md` was thinner than `@spec-writer`'s output for the same
 brief, but conductor adds an actionable 5-phase `plan.md` checklist that
 `@spec-writer` does not produce.
 
+## Exposing the demo to audience phones
+
+```bash
+make expose
+```
+
+Auto-detects `$CLOUD_SHELL=true`, then:
+
+1. Resolves both preview URLs via `cloudshell get-web-host-url --port=8080|8081`.
+2. Patches `frontend/.env`'s `VITE_AGENT_ENDPOINT` to the public agent URL
+   (so audience phones can reach the agent, not just the frontend).
+3. Prints both URLs. **Restart `make frontend-dev`** so Vite picks up the
+   new env var.
+
+The QR rendered on `/admin` already uses `window.location.origin`, so
+audience scanning the QR from your projector hits the public URL
+automatically. No manual URL paste.
+
+If `cloudshell get-web-host-url` errors out, fall back to the toolbar
+**Web Preview** button → "Preview on port 8080 / 8081".
+
 ## Cloud Shell tutorial mode
 
 For a self-paced run, you can render any markdown file as a side panel via
